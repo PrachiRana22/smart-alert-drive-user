@@ -25,7 +25,7 @@ export default function HomeScreen({ navigation }) {
             {/* Header Section */}
             <View className="flex-row justify-between items-center px-6 pt-16 pb-4 bg-surface">
                 <Text className="text-2xl font-outfit-bold text-secondary">Hii, {user.name}</Text>
-                <TouchableOpacity onPress={handleLogout} className="p-2 -mr-2">
+                <TouchableOpacity /*onPress={handleLogout}*/ onPress={() => navigation.navigate('Settings')} className="p-2 -mr-2">
                     {/* Replaced Settings with Logout temporarily or just Settings */}
                     <Settings color="#1E293B" size={24} />
                 </TouchableOpacity>
