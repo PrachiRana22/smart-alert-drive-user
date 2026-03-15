@@ -6,14 +6,12 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Mock initial user for ease of testing
     const [registeredUsers, setRegisteredUsers] = useState([
         { name: "Test Driver", email: "test@driver.com", password: "password123" }
     ]);
 
-    // Mock dashboard data template
     const getDashboardData = (name) => ({
-        safetyScore: Math.floor(Math.random() * (100 - 80 + 1)) + 80, // Random score between 80-100
+        safetyScore: Math.floor(Math.random() * (100 - 80 + 1)) + 80,
         driveTime: "4h 20m",
         totalDistance: "142 mi",
         recentAlerts: [
@@ -26,7 +24,10 @@ export const AuthProvider = ({ children }) => {
         setIsLoading(true);
         return new Promise((resolve, reject) => {
             setTimeout(() => {
-                const foundUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                const foundUser = registeredUsers.find(
+                    u => u.email.toLowerCase() === email.toLowerCase()
+                );
 
                 if (!foundUser) {
                     setIsLoading(false);
@@ -38,35 +39,46 @@ export const AuthProvider = ({ children }) => {
                     return reject("Incorrect password.");
                 }
 
-                // Successful login
                 setUser({
                     name: foundUser.name,
                     email: foundUser.email,
                     token: "mock-jwt-token-123",
                     dashboard: getDashboardData(foundUser.name)
                 });
+
                 setIsLoading(false);
                 resolve(true);
+
             }, 1000);
         });
     };
 
     const signup = async (name, email, password) => {
         setIsLoading(true);
+
         return new Promise((resolve, reject) => {
+
             setTimeout(() => {
-                const userExists = registeredUsers.some(u => u.email.toLowerCase() === email.toLowerCase());
+
+                const userExists = registeredUsers.some(
+                    u => u.email.toLowerCase() === email.toLowerCase()
+                );
 
                 if (userExists) {
                     setIsLoading(false);
                     return reject("An account with this email already exists.");
                 }
 
-                // Append new user to mock database
-                setRegisteredUsers([...registeredUsers, { name, email, password }]);
+                setRegisteredUsers([
+                    ...registeredUsers,
+                    { name, email, password }
+                ]);
+
                 setIsLoading(false);
                 resolve(true);
+
             }, 1000);
+
         });
     };
 
@@ -75,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+        <AuthContext.Provider value={{ user, setUser, isLoading, login, signup, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -9,7 +9,9 @@ import SettingsScreen from '../screens/SettingsScreen';
 import AlertsScreen from '../screens/AlertsScreen';
 import TripSetupScreen from '../screens/TripSetupScreen';
 import DriverMonitorScreen from '../screens/DriverMonitorScreen';
-
+import DriverProfileScreen from '../screens/DriverProfileScreen';
+import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
+import TripFeedbackScreen from '../screens/TripFeedbackScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +28,9 @@ export default function AppNavigator() {
                 <Stack.Screen name="Alerts" component={AlertsScreen} />
                 <Stack.Screen name="TripSetup" component={TripSetupScreen} />
                 <Stack.Screen name="DriverMonitor" component={DriverMonitorScreen} />
+                <Stack.Screen name="DriverProfile" component={DriverProfileScreen}/>
+                <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
+                <Stack.Screen name="TripFeedback" component={TripFeedbackScreen} />
 
 
             </Stack.Navigator>

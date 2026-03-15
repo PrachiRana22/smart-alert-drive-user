@@ -14,7 +14,7 @@ export default function LoginScreen() {
         if (!email || !password) return alert("Please enter both email and password.");
         try {
             await login(email, password);
-            navigation.replace('Home');
+            navigation.replace('VehicleDetails');
         } catch (error) {
             alert(error); // Displays the rejection message from AuthContext
         }
