@@ -65,7 +65,7 @@ export default function HomeScreen({ navigation }) {
                 <View className="bg-white rounded-2xl p-4 border border-gray-200 mb-6">
 
                     <Text className="font-outfit text-gray-500">
-                        Driver Name
+                        User Name
                     </Text>
                     <Text className="font-outfit-bold text-lg text-secondary mb-2">
                         {user.name}
