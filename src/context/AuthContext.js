@@ -43,7 +43,8 @@ export const AuthProvider = ({ children }) => {
                     name: foundUser.name,
                     email: foundUser.email,
                     token: "mock-jwt-token-123",
-                    dashboard: getDashboardData(foundUser.name)
+                    dashboard: getDashboardData(foundUser.name),
+                    recentTrip: null,
                 });
 
                 setIsLoading(false);
@@ -86,8 +87,17 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const saveTrip = (tripData) => {
+        if (user) {
+            setUser({
+                ...user,
+                recentTrip: tripData
+            });
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, setUser, isLoading, login, signup, logout }}>
+        <AuthContext.Provider value={{ user, setUser, isLoading, login, signup, logout, saveTrip }}>
             {children}
         </AuthContext.Provider>
     );

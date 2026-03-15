@@ -9,8 +9,10 @@ import { Audio } from "expo-av";
 // To use real face detection, you need a custom Development Build (npx expo run:android).
 // import * as FaceDetector from 'expo-face-detector';
 import { AlertTriangle, ShieldCheck, Square } from "lucide-react-native";
+import { AuthContext } from "../context/AuthContext";
 
 export default function DriverMonitorScreen({ navigation, route }) {
+  const { user } = React.useContext(AuthContext);
   const [permission, requestPermission] = useCameraPermissions();
   const [location, setLocation] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -383,7 +385,18 @@ export default function DriverMonitorScreen({ navigation, route }) {
       </View>
 
       {/* STOP BUTTON */}
-      <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.stopButton}>
+      <TouchableOpacity 
+         onPress={() => {
+             const tripData = {
+                 date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+                 route: `${start || "Unknown"} → ${end || "Unknown"}`,
+                 vehicle: `${vehicleName || user?.vehicleType || "Car"} (${vehicleNumber || user?.vehicleNumber || "Unknown"})`,
+                 alertsCount: alerts.length
+             };
+             navigation.replace("TripFeedback", { tripData });
+         }} 
+         style={styles.stopButton}
+      >
         <Text style={styles.stopButtonText}>Stop Trip</Text>
       </TouchableOpacity>
     </View>

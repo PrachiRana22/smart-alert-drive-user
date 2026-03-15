@@ -13,7 +13,7 @@ export default function DriverProfileScreen() {
 
             {/* Title */}
             <Text className="text-2xl font-outfit-bold text-secondary mb-6">
-                Driver Profile
+                User Profile
             </Text>
 
             {/* Profile Card */}
@@ -23,7 +23,7 @@ export default function DriverProfileScreen() {
                 <View className="flex-row items-center mb-2">
                     <User color="#2563EB" size={22} />
                     <Text className="ml-3 font-outfit text-gray-500">
-                        Driver Name
+                        User Name
                     </Text>
                 </View>
 
@@ -102,47 +102,51 @@ export default function DriverProfileScreen() {
 
             {/* Trip Info */}
 
-            <View className="mt-8">
+            <View className="mt-8 mb-8">
 
                 <Text className="text-xl font-outfit-bold text-secondary mb-4">
                     Recent Trip
                 </Text>
 
-                <View className="bg-white rounded-3xl p-6 border border-gray-200">
+                {user?.recentTrip ? (
+                    <View className="bg-white rounded-3xl p-6 border border-gray-200">
 
-                    <Text className="font-outfit text-gray-500">
-                        Date
-                    </Text>
+                        <Text className="font-outfit text-gray-500">
+                            Date
+                        </Text>
+                        <Text className="font-outfit-bold mb-2">
+                            {user.recentTrip.date}
+                        </Text>
 
-                    <Text className="font-outfit-bold mb-2">
-                        12 March 2026
-                    </Text>
+                        <Text className="font-outfit text-gray-500">
+                            Route
+                        </Text>
+                        <Text className="font-outfit-bold mb-2 break-words">
+                            {user.recentTrip.route}
+                        </Text>
 
-                    <Text className="font-outfit text-gray-500">
-                        Route
-                    </Text>
+                        <Text className="font-outfit text-gray-500">
+                            Vehicle
+                        </Text>
+                        <Text className="font-outfit-bold mb-2">
+                            {user.recentTrip.vehicle}
+                        </Text>
 
-                    <Text className="font-outfit-bold mb-2">
-                        Ahmedabad → Vadodara
-                    </Text>
+                        <Text className="font-outfit text-gray-500">
+                            Alerts Triggered
+                        </Text>
+                        <Text className="font-outfit-bold">
+                            {user.recentTrip.alertsCount} Alert{user.recentTrip.alertsCount !== 1 ? 's' : ''}
+                        </Text>
 
-                    <Text className="font-outfit text-gray-500">
-                        Vehicle
-                    </Text>
-
-                    <Text className="font-outfit-bold mb-2">
-                        {user?.vehicleType} ({user?.vehicleNumber})
-                    </Text>
-
-                    <Text className="font-outfit text-gray-500">
-                        Alerts
-                    </Text>
-
-                    <Text className="font-outfit-bold">
-                        2 Alerts
-                    </Text>
-
-                </View>
+                    </View>
+                ) : (
+                    <View className="bg-white rounded-3xl p-6 border border-gray-200 items-center">
+                        <Text className="font-outfit text-gray-500 text-center">
+                            No trips found yet. Start a new trip to see details here!
+                        </Text>
+                    </View>
+                )}
 
             </View>
 

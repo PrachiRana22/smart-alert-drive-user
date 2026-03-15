@@ -1,14 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from "react-native";
 import { Star } from "lucide-react-native";
+import { AuthContext } from "../context/AuthContext";
 
-export default function TripFeedbackScreen({ navigation }) {
+export default function TripFeedbackScreen({ navigation, route }) {
+  
+const { saveTrip } = useContext(AuthContext);
+const { tripData } = route.params || {};
 
 const [rating,setRating] = useState(0)
 const [alertHelpful,setAlertHelpful] = useState(null)
 const [feedback,setFeedback] = useState("")
 
 const submitFeedback = () => {
+    
+    // Save trip if valid data exists
+    if(tripData) {
+        saveTrip({
+            ...tripData,
+            rating,
+            alertHelpful,
+            feedback
+        });
+    }
 
 Alert.alert(
 "Thank You",
