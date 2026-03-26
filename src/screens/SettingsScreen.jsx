@@ -1,12 +1,17 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, User, ShieldCheck, Bell, HardDrive, Globe, RefreshCw, HelpCircle, LogOut, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, User, ShieldCheck, Bell, HardDrive, Globe, RefreshCw, HelpCircle, LogOut, ChevronRight, Sun } from 'lucide-react-native';
+import { useColorScheme } from 'nativewind';
 import { AuthContext } from '../context/AuthContext';
+import { useTranslation } from '../locales';
 
 export default function SettingsScreen() {
     const navigation = useNavigation();
     const { logout } = React.useContext(AuthContext);
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
+    const { t } = useTranslation();
 
     const handleLogout = () => {
         logout();
@@ -18,49 +23,62 @@ export default function SettingsScreen() {
 
     const SettingItem = ({ icon: Icon, title, onPress, isLogout }) => (
         <TouchableOpacity
-            className="flex-row items-center justify-between py-4 border-b border-gray-100 active:bg-gray-50"
+            className="flex-row items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800 active:bg-gray-50 dark:active:bg-slate-800"
             onPress={onPress}
         >
             <View className="flex-row items-center">
-                <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isLogout ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <Icon color={isLogout ? "#DC2626" : "#64748B"} size={22} />
+                <View className={`w-10 h-10 rounded-full items-center justify-center mr-4 ${isLogout ? 'bg-red-50 dark:bg-red-900/40' : 'bg-gray-50 dark:bg-slate-800'}`}>
+                    <Icon color={isLogout ? "#DC2626" : (isDark ? "#94A3B8" : "#64748B")} size={22} />
                 </View>
-                <Text className={`text-base font-outfit-medium ${isLogout ? 'text-red-500' : 'text-secondary'}`}>
+                <Text className={`text-base font-outfit-medium ${isLogout ? 'text-red-500 dark:text-red-400' : 'text-secondary dark:text-gray-200'}`}>
                     {title}
                 </Text>
             </View>
-            {!isLogout && <ChevronRight color="#CBD5E1" size={20} />}
+            {!isLogout && <ChevronRight color={isDark ? "#475569" : "#CBD5E1"} size={20} />}
         </TouchableOpacity>
     );
 
     return (
-        <View className="flex-1 bg-background">
+        <View className="flex-1 bg-background dark:bg-slate-900">
             {/* Header */}
-            <View className="flex-row items-center pt-16 pb-4 px-6 bg-surface border-b border-gray-100 shadow-sm z-10 w-full">
-                <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2 rounded-full bg-gray-50">
-                    <ChevronLeft color="#1E293B" size={24} />
+            <View className="flex-row items-center pt-16 pb-4 px-6 bg-surface dark:bg-slate-800 border-b border-gray-100 dark:border-gray-800 shadow-sm z-10 w-full">
+                <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2 rounded-full bg-gray-50 dark:bg-slate-700">
+                    <ChevronLeft color={isDark ? "#E2E8F0" : "#1E293B"} size={24} />
                 </TouchableOpacity>
                 <View className="flex-1 flex-row items-center justify-center pr-8">
                     <View className="w-8 h-8 bg-gray-800 rounded-full items-center justify-center mr-3">
-                        <View className="w-4 h-4 rounded-full border-2 border-white" />
+                        <User color="#FFFFFF" size={18} />
                     </View>
-                    <Text className="text-xl font-outfit-bold text-secondary">Settings</Text>
+                    <Text className="text-xl font-outfit-bold text-secondary dark:text-gray-100">{t('settings.title')}</Text>
                 </View>
             </View>
 
-            <ScrollView className="flex-1 px-6 pt-6 bg-surface" showsVerticalScrollIndicator={false}>
-                <View className="mb-8">
-                    <SettingItem icon={User} title="Account" onPress={() => { }} />
-                    <SettingItem icon={ShieldCheck} title="Privacy" onPress={() => { }} />
-                    <SettingItem icon={Bell} title="Notifications" onPress={() => { }} />
-                    <SettingItem icon={HardDrive} title="Storage" onPress={() => { }} />
-                    <SettingItem icon={Globe} title="App language" onPress={() => { }} />
-                    <SettingItem icon={RefreshCw} title="App updates" onPress={() => { }} />
-                    <SettingItem icon={HelpCircle} title="Help & Feedback" onPress={() => { }} />
+            <ScrollView className="flex-1 px-6 pt-6" showsVerticalScrollIndicator={false}>
+                {/* Account Section */}
+                <Text className="text-sm font-outfit-bold text-gray-500 dark:text-gray-400 mb-2">{t('settings.account')}</Text>
+                <View className="bg-surface dark:bg-slate-800 rounded-2xl mb-6 shadow-sm border border-gray-100 dark:border-gray-800 px-4">
+                    <SettingItem icon={User} title={t('settings.driverProfile')} onPress={() => navigation.navigate('DriverProfile')} />
+                    <SettingItem icon={Globe} title={t('settings.appLanguage')} onPress={() => navigation.navigate('AppLanguage')} />
+                    <SettingItem icon={Sun} title={t('settings.displayTheme')} onPress={() => navigation.navigate('DisplayTheme')} />
+                    <SettingItem icon={ShieldCheck} title={t('settings.privacy')} onPress={() => navigation.navigate('Privacy')} />
+                </View>
 
-                    <View className="mt-4">
-                        <SettingItem icon={LogOut} title="Logout" onPress={handleLogout} isLogout />
-                    </View>
+                {/* General Section */}
+                <Text className="text-sm font-outfit-bold text-gray-500 dark:text-gray-400 mb-2">{t('settings.general')}</Text>
+                <View className="bg-surface dark:bg-slate-800 rounded-2xl mb-6 shadow-sm border border-gray-100 dark:border-gray-800 px-4">
+                    <SettingItem icon={Bell} title={t('settings.notifications')} onPress={() => navigation.navigate('Notifications')} />
+                    <SettingItem icon={HardDrive} title={t('settings.storage')} onPress={() => navigation.navigate('Storage')} />
+                    <SettingItem icon={RefreshCw} title={t('settings.appUpdates')} onPress={() => navigation.navigate('AppUpdate')} />
+                </View>
+
+                {/* Support Section */}
+                <Text className="text-sm font-outfit-bold text-gray-500 dark:text-gray-400 mb-2">{t('settings.support')}</Text>
+                <View className="bg-surface dark:bg-slate-800 rounded-2xl mb-6 shadow-sm border border-gray-100 dark:border-gray-800 px-4">
+                    <SettingItem icon={HelpCircle} title={t('settings.helpFeedback')} onPress={() => navigation.navigate('HelpFeedback')} />
+                </View>
+
+                <View className="mt-4 mb-8">
+                    <SettingItem icon={LogOut} title={t('settings.logout')} onPress={handleLogout} isLogout />
                 </View>
             </ScrollView>
         </View>

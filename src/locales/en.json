@@ -1,0 +1,45 @@
+{
+  "settings": {
+    "title": "Settings",
+    "account": "ACCOUNT",
+    "driverProfile": "User Profile",
+    "appLanguage": "App Language",
+    "displayTheme": "Display & Theme",
+    "privacy": "Privacy & Guidelines",
+    "general": "GENERAL",
+    "notifications": "Notifications",
+    "system": "SYSTEM",
+    "storage": "Storage",
+    "support": "SUPPORT",
+    "helpFeedback": "Help & Feedback",
+    "appUpdates": "App Updates",
+    "logout": "Logout"
+  },
+  "languageScreen": {
+    "title": "App Language",
+    "alertTitle": "Alert Text Language",
+    "alertDesc": "Alerts like \"Slow Down\" will appear in selected language",
+    "guideTitle": "Instruction Guide",
+    "guideDesc": "App instructions and alert meanings will be shown in selected language.",
+    "sosTitle": "Emergency SOS Language",
+    "sosDesc": "Emergency SMS will be sent in selected language",
+    "labelsTitle": "App Labels Language",
+    "labelsDesc": "All buttons and settings labels will follow selected language."
+  },
+  "home": {
+    "welcome": "Welcome back",
+    "driverName": "User Name",
+    "vehicleType": "Vehicle Type",
+    "vehicleNumber": "Vehicle Number",
+    "weeklyTripReport": "Weekly Trip Report",
+    "safetyScore": "Safety Score",
+    "driveTime": "Total Drive Time",
+    "distance": "Total Distance",
+    "totalAlerts": "Total Alerts",
+    "totalTrips": "Total Trips",
+    "recentTrip": "Recent Trip",
+    "viewAll": "View All",
+    "vehicle": "Vehicle",
+    "noRecentTrip": "No recent trips available."
+  }
+}

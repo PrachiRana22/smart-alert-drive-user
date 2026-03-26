@@ -1,0 +1,45 @@
+{
+  "settings": {
+    "title": "સેટિંગ્સ",
+    "account": "એકાઉન્ટ",
+    "driverProfile": "વપરાશકર્તા પ્રોફાઇલ",
+    "appLanguage": "એપની ભાષા",
+    "displayTheme": "ડિસ્પ્લે અને થીમ",
+    "privacy": "ગોપનીયતા અને માર્ગદર્શિકા",
+    "general": "સામાન્ય",
+    "notifications": "સૂચનાઓ",
+    "system": "સિસ્ટમ",
+    "storage": "સ્ટોરેજ",
+    "support": "સપોર્ટ",
+    "helpFeedback": "સહાય અને પ્રતિસાદ",
+    "appUpdates": "એપ અપડેટ્સ",
+    "logout": "લૉગ આઉટ"
+  },
+  "languageScreen": {
+    "title": "એપની ભાષા",
+    "alertTitle": "ચેતવણી ટેક્સ્ટ ભાષા",
+    "alertDesc": "\"ધીમા પડો\" જેવી ચેતવણીઓ પસંદ કરેલ ભાષામાં દેખાશે",
+    "guideTitle": "સૂચના માર્ગદર્શિકા",
+    "guideDesc": "એપની સૂચનાઓ અને ચેતવણીઓના અર્થ પસંદ કરેલ ભાષામાં બતાવવામાં આવશે.",
+    "sosTitle": "ઇમરજન્સી SOS ભાષા",
+    "sosDesc": "ઇમરજન્સી SMS પસંદ કરેલ ભાષામાં મોકલવામાં આવશે",
+    "labelsTitle": "એપ લેબલ્સ ભાષા",
+    "labelsDesc": "બધા બટનો અને સેટિંગ્સ લેબલ્સ પસંદ કરેલ ભાષાને અનુસરશે."
+  },
+  "home": {
+    "welcome": "સ્વાગત છે",
+    "driverName": "વપરાશકર્તા નામ",
+    "vehicleType": "વાહનનો પ્રકાર",
+    "vehicleNumber": "વાહન નંબર",
+    "weeklyTripReport": "સાપ્તાહિક સફર રિપોર્ટ",
+    "safetyScore": "સલામતી સ્કોર",
+    "driveTime": "કુલ ડ્રાઇવ સમય",
+    "distance": "કુલ અંતર",
+    "totalAlerts": "કુલ ચેતવણીઓ",
+    "totalTrips": "કુલ સફર",
+    "recentTrip": "તાજેતરની સફર",
+    "viewAll": "બધા જુઓ",
+    "vehicle": "વાહન",
+    "noRecentTrip": "કોઈ તાજેતરની સફર ઉપલબ્ધ નથી."
+  }
+}

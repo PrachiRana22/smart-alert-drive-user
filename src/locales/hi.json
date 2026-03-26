@@ -1,0 +1,45 @@
+{
+  "settings": {
+    "title": "सेटिंग्स",
+    "account": "खाता",
+    "driverProfile": "उपयोगकर्ता प्रोफ़ाइल",
+    "appLanguage": "ऐप की भाषा",
+    "displayTheme": "डिस्प्ले और थीम",
+    "privacy": "गोपनीयता और दिशानिर्देश",
+    "general": "सामान्य",
+    "notifications": "सूचनाएं",
+    "system": "सिस्टम",
+    "storage": "स्टोरेज",
+    "support": "सहायता",
+    "helpFeedback": "सहायता और प्रतिक्रिया",
+    "appUpdates": "ऐप अपडेट्स",
+    "logout": "लॉग आउट"
+  },
+  "languageScreen": {
+    "title": "ऐप की भाषा",
+    "alertTitle": "चेतावनी टेक्स्ट भाषा",
+    "alertDesc": "\"धीमा करें\" जैसी चेतावनियाँ चयनित भाषा में दिखाई देंगी",
+    "guideTitle": "निर्देश पुस्तिका",
+    "guideDesc": "ऐप के निर्देश और चेतावनियों के अर्थ चयनित भाषा में दिखाए जाएंगे।",
+    "sosTitle": "आपातकालीन SOS भाषा",
+    "sosDesc": "आपातकालीन SMS चयनित भाषा में भेजा जाएगा",
+    "labelsTitle": "ऐप लेबल भाषा",
+    "labelsDesc": "सभी बटन और सेटिंग्स लेबल चयनित भाषा का पालन करेंगे।"
+  },
+  "home": {
+    "welcome": "वापसी पर स्वागत है",
+    "driverName": "उपयोगकर्ता का नाम",
+    "vehicleType": "वाहन का प्रकार",
+    "vehicleNumber": "वाहन नंबर",
+    "weeklyTripReport": "साप्ताहिक यात्रा रिपोर्ट",
+    "safetyScore": "सुरक्षा स्कोर",
+    "driveTime": "कुल ड्राइव समय",
+    "distance": "कुल दूरी",
+    "totalAlerts": "कुल चेतावनियां",
+    "totalTrips": "कुल यात्राएं",
+    "recentTrip": "हाल की यात्रा",
+    "viewAll": "सभी देखें",
+    "vehicle": "वाहन",
+    "noRecentTrip": "कोई हालिया यात्रा उपलब्ध नहीं है।"
+  }
+}

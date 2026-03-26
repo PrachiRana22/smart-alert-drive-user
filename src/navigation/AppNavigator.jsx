@@ -12,9 +12,18 @@ import DriverMonitorScreen from '../screens/DriverMonitorScreen';
 import DriverProfileScreen from '../screens/DriverProfileScreen';
 import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
 import TripFeedbackScreen from '../screens/TripFeedbackScreen';
+import LicenseDetails from "../screens/License_Details";
+import PrivacyScreen from '../screens/PrivacyScreen';
+import NotificationScreen from '../screens/NotificationScreen';
+import StorageScreen from '../screens/StorageScreen';
+import AppLanguageScreen from '../screens/AppLanguageScreen';
+import AppUpdateScreen from '../screens/AppUpdateScreen';
+import HelpFeedbackScreen from '../screens/HelpFeedbackScreen';
+import DisplayThemeScreen from '../screens/DisplayThemeScreen';
+
 
 const Stack = createNativeStackNavigator();
-
+ 
 export default function AppNavigator() {
     return (
         <NavigationContainer>
@@ -31,6 +40,14 @@ export default function AppNavigator() {
                 <Stack.Screen name="DriverProfile" component={DriverProfileScreen}/>
                 <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
                 <Stack.Screen name="TripFeedback" component={TripFeedbackScreen} />
+                <Stack.Screen name="LicenseDetails" component={LicenseDetails} />
+                <Stack.Screen name="Privacy" component={PrivacyScreen} />
+                <Stack.Screen name="Notifications" component={NotificationScreen} />
+                <Stack.Screen name="Storage" component={StorageScreen} />
+                <Stack.Screen name="AppLanguage" component={AppLanguageScreen} />
+                <Stack.Screen name="AppUpdate" component={AppUpdateScreen} />
+                <Stack.Screen name="HelpFeedback" component={HelpFeedbackScreen} />
+                <Stack.Screen name="DisplayTheme" component={DisplayThemeScreen} />
 
 
             </Stack.Navigator>

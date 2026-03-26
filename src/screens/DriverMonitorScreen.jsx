@@ -1,22 +1,38 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Vibration } from "react-native";
+import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, runAsync } from 'react-native-vision-camera';
+import { useFaceDetector } from 'react-native-vision-camera-face-detector';
+import { Worklets } from 'react-native-worklets-core';
 import MapView, { Marker, Polyline } from "react-native-maps";
 import polyline from '@mapbox/polyline';
 import * as Location from "expo-location";
 import { Audio } from "expo-av";
-// expo-face-detector cannot be used in Expo Go as it lacks the native module in recent SDKs.
-// To use real face detection, you need a custom Development Build (npx expo run:android).
-// import * as FaceDetector from 'expo-face-detector';
 import { AlertTriangle, ShieldCheck, Square } from "lucide-react-native";
 import { AuthContext } from "../context/AuthContext";
 
 export default function DriverMonitorScreen({ navigation, route }) {
   const { user } = React.useContext(AuthContext);
-  const [permission, requestPermission] = useCameraPermissions();
+
+  const persona = user?.persona || 'Normal';
+  const getThresholds = () => {
+    switch (persona) {
+      case 'Moderate':
+        return { blinkLimit: 2, sleepFrames: 20 };
+      case 'Critical':
+        return { blinkLimit: 6, sleepFrames: 50 };
+      case 'Normal':
+      default:
+        return { blinkLimit: 4, sleepFrames: 37 };
+    }
+  };
+  const { blinkLimit, sleepFrames } = getThresholds();
+
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('front');
+  
   const [location, setLocation] = useState(null);
   const [alerts, setAlerts] = useState([]);
-  const [isSimulating, setIsSimulating] = useState(true); // Active by default
+  const [isSimulating, setIsSimulating] = useState(false); // Make real detection default now
   const [testState, setTestState] = useState("Normal"); // Normal, Drowsy, Sleep
   const testStateRef = useRef(testState);
 
@@ -26,6 +42,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   const [eyesClosedFrames, setEyesClosedFrames] = useState(0); 
   const [faceStatusText, setFaceStatusText] = useState("Status: Monitoring");
+  const [activePersona, setActivePersona] = useState("Normal"); // Dynamic persona state
   
   // Blink tracking
   const [blinkTimestamps, setBlinkTimestamps] = useState([]);
@@ -41,6 +58,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
   const [routeCoordinates, setRouteCoordinates] = useState(routeCoords || []);
   const [endCoords, setEndCoords] = useState(destinationCoords || null);
 
+  // Distance and Time Tracking
+  const [startTime] = useState(Date.now());
+  const [tripDistance, setTripDistance] = useState(0); // in meters
+
   useEffect(() => {
     startLiveLocation();
     if ((!routeCoords || routeCoords.length === 0) && start && end) {
@@ -48,88 +69,121 @@ export default function DriverMonitorScreen({ navigation, route }) {
     }
   }, []);
 
-  // Manual frame capture interval since onFacesDetected is deprecated in SDK 51+
-  useEffect(() => {
-    let isActive = isSimulating;
-    
-    const processFrame = async () => {
-      if (!isActive) return;
-      if (cameraRef.current && !isProcessingRef.current) {
-        isProcessingRef.current = true;
-        try {
-          // -- SIMULATION FOR TESTING IN EXPO GO --
-          let emulateEyesClosed = false;
+  const { detectFaces } = useFaceDetector({
+    performanceMode: 'fast',
+    contourMode: 'none',
+    landmarkMode: 'none',
+    classificationMode: 'all',
+  });
 
-          // Rather than Math.random() or time, we use the manual button state!
-          if (testStateRef.current === "Normal") {
-            emulateEyesClosed = false;
-          } else if (testStateRef.current === "Drowsy") {
-            // Rapid blinking emulation
-            emulateEyesClosed = (Date.now() % 400) > 200; 
-          } else if (testStateRef.current === "Sleep") {
-            // Completely closed tracking
-            emulateEyesClosed = true;
-          }
-
-          const mockResult = {
-            faces: [{
-              leftEyeOpenProbability: emulateEyesClosed ? 0.1 : 0.9,
-              rightEyeOpenProbability: emulateEyesClosed ? 0.1 : 0.9,
-            }]
-          };
-          handleFacesDetected(mockResult);
-        } catch (e) {
-           // Silently fail if camera busy
-        } finally {
-          isProcessingRef.current = false;
-        }
-      }
-      
-      if (isActive) setTimeout(processFrame, 800); // Check approx every ~800ms
-    };
-
-    if (isActive) {
-      processFrame();
-    } else {
-      setEyesClosedFrames(0);
-      setFaceStatusText("Detection Paused");
-      setBlinkTimestamps([]);
+  const handleFacesDetectedJS = Worklets.createRunOnJS((faces, isSim) => {
+    // Transform formatting to match the old expected format
+    if (!isSim && faces && faces.length > 0) {
+      const mapped = {
+         faces: faces.map(f => ({
+           leftEyeOpenProbability: f.leftEyeOpenProbability,
+           rightEyeOpenProbability: f.rightEyeOpenProbability
+         }))
+      };
+      handleFacesDetected(mapped);
     }
+  });
 
+  const frameProcessor = useFrameProcessor((frame) => {
+    'worklet';
+    if (!isSimulating) {
+       runAsync(frame, () => {
+         'worklet';
+         const faces = detectFaces(frame);
+         if (faces.length > 0) {
+            handleFacesDetectedJS(faces, isSimulating);
+         }
+       });
+    }
+  }, [isSimulating, handleFacesDetectedJS]);
+
+  // Simulation mode check loops (only active if simulating)
+  useEffect(() => {
+    if (!isSimulating) return;
+    
+    let isActive = true;
+    const processFrame = () => {
+      if (!isActive) return;
+      let emulateEyesClosed = false;
+      if (testStateRef.current === "Normal") {
+        emulateEyesClosed = false;
+      } else if (testStateRef.current === "Drowsy") {
+        emulateEyesClosed = (Date.now() % 400) > 200; 
+      } else if (testStateRef.current === "Sleep") {
+        emulateEyesClosed = true;
+      }
+      const mockResult = {
+        faces: [{
+          leftEyeOpenProbability: emulateEyesClosed ? 0.1 : 0.9,
+          rightEyeOpenProbability: emulateEyesClosed ? 0.1 : 0.9,
+        }]
+      };
+      handleFacesDetected(mockResult);
+      if (isActive) setTimeout(processFrame, 800);
+    };
+    if (isActive) processFrame();
     return () => { isActive = false; };
   }, [isSimulating]);
 
-  // Monitor prolonged eye closure based on slow frames (1 frame = 800ms)
+  // Monitor prolonged eye closure based on slow frames
   useEffect(() => {
-    if (!isSimulating) return;
-
     if (eyesClosedFrames === 0) {
       if (!wasEyesClosedLastFrame) {
         setFaceStatusText("Eyes Open - Safe");
+        // Revert active persona gradually to normal when eyes are open and safe
+        if (activePersona !== "Normal") {
+           setActivePersona("Normal");
+        }
       }
-    } else if (eyesClosedFrames >= 37) { // 37 frames * 800ms = ~30 seconds -> CRITICAL
+    } else if (eyesClosedFrames >= sleepFrames) { // dynamic threshold based on persona
       addAlert('Critical', 'CRITICAL: Driver asleep! Wake up immediately!');
       setFaceStatusText("CRITICAL - ASLEEP!");
-      playBeep();
+      setActivePersona("Critical");
+      playBeep('Critical');
       // reset to prevent spamming until they press "I'm Awake" or open their eyes
       setEyesClosedFrames(0);
     }
-  }, [eyesClosedFrames, isSimulating]);
+  }, [eyesClosedFrames]);
 
   // Cleanup Sound
   useEffect(() => {
     return sound ? () => sound.unloadAsync() : undefined;
   }, [sound]);
 
-  const playBeep = async () => {
+  const playBeep = async (type) => {
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/beep.mp3') // We will need a generic beep or fallback
+      if (sound) {
+        await sound.unloadAsync();
+      }
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        require('../../assets/alarm.mp3')
       );
-      setSound(sound);
-      await sound.playAsync();
+      setSound(newSound);
+
+      if (type === 'Critical') {
+        Vibration.vibrate([0, 500, 200, 500], true);
+        await newSound.setIsLoopingAsync(true);
+      } else {
+        Vibration.vibrate(500);
+      }
+      
+      await newSound.playAsync();
     } catch (error) {
        console.log("Could not play sound", error);
+    }
+  };
+
+  const stopBeep = async () => {
+    Vibration.cancel();
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
     }
   };
 
@@ -150,6 +204,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
           const points = polyline.decode(data.routes[0].geometry);
           const coords = points.map(point => ({ latitude: point[0], longitude: point[1] }));
           setRouteCoordinates(coords);
+          setTripDistance(data.routes[0].distance || 0);
         }
       }
     } catch (error) {
@@ -158,6 +213,8 @@ export default function DriverMonitorScreen({ navigation, route }) {
   };
 
   const addAlert = (type, message) => {
+    setActivePersona(type); // Dynamically change the persona displaying on screen to the alert type
+    
     const newAlert = {
       id: Date.now().toString(),
       type, // 'Normal', 'Moderate', 'Critical'
@@ -172,13 +229,17 @@ export default function DriverMonitorScreen({ navigation, route }) {
         message,
         [{ text: "I'm Awake", onPress: () => {
           setEyesClosedFrames(0);
+          stopBeep();
         }}]
       );
     }
   };
 
   const handleFacesDetected = ({ faces }) => {
-    if (!isSimulating || faces.length === 0) return;
+    if (faces.length === 0) {
+      // No face detected, assume eyes closed or log missing face
+      return;
+    }
 
     const face = faces[0];
     const leftEye = face.leftEyeOpenProbability;
@@ -204,10 +265,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
             const recentBlinks = [...prev, now].filter(t => now - t < 7000);
             const blinkCount = recentBlinks.length;
 
-            if (blinkCount >= 4) { // Increased to 4 blinks in 7s to avoid false positives
+            if (blinkCount >= blinkLimit) { // dynamic blink threshold based on persona
               addAlert('Moderate', 'Warning: Continuous rapid blinking (Drowsy)!');
               setFaceStatusText("Warning - Frequent Blinks");
-              playBeep();
+              playBeep('Moderate');
               return []; // Reset after alerting to avoid spam
             } else if (blinkCount === 1) {
                // Do not add normal alert to avoid UI clutter
@@ -246,9 +307,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
     );
   };
 
-  if (!permission) return <View />;
-
-  if (!permission.granted) {
+  if (!hasPermission) {
     return (
       <View style={styles.center}>
         <Text style={styles.permissionText}>Camera permission required for safety monitoring</Text>
@@ -287,11 +346,17 @@ export default function DriverMonitorScreen({ navigation, route }) {
         </View>
 
         <View style={styles.cameraWrapper}>
-          <CameraView 
-            ref={cameraRef}
-            facing="front" 
-            style={{ flex: 1 }} 
-          />
+          {device != null ? (
+            <Camera 
+              ref={cameraRef}
+              style={{ flex: 1 }} 
+              device={device}
+              isActive={true}
+              frameProcessor={frameProcessor}
+            />
+          ) : (
+            <View style={styles.center}><Text style={{ color: 'white' }}>No Camera</Text></View>
+          )}
         </View>
       </View>
       
@@ -302,27 +367,36 @@ export default function DriverMonitorScreen({ navigation, route }) {
         <Text style={{ fontSize: 12, color: 'gray', fontStyle: 'italic'}}>Current State: {testState}</Text>
       </View>
 
-      {/* MANUAL TEST CONTROLS */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
-          <TouchableOpacity 
-            onPress={() => setTestState("Normal")}
-             style={[styles.testButton, testState === "Normal" && styles.testButtonActive]}
-          >
-            <Text style={[styles.testButtonText, testState === "Normal" && styles.testButtonTextActive]}>Normal</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => setTestState("Drowsy")}
-            style={[styles.testButton, testState === "Drowsy" && styles.testButtonActive]}
-          >
-            <Text style={[styles.testButtonText, testState === "Drowsy" && styles.testButtonTextActive]}>Drowsy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-             onPress={() => setTestState("Sleep")}
-             style={[styles.testButton, testState === "Sleep" && styles.testButtonActive]}
-          >
-            <Text style={[styles.testButtonText, testState === "Sleep" && styles.testButtonTextActive]}>Asleep</Text>
-          </TouchableOpacity>
+      {/* PERSONA DISPLAY */}
+      <View style={{ paddingHorizontal: 16, marginBottom: 10 }}>
+        <Text style={{ fontSize: 13, color: '#4b5563', fontWeight: 'bold' }}>
+          Active Persona (State): <Text style={{ color: activePersona === 'Normal' ? '#16a34a' : activePersona === 'Moderate' ? '#ea580c' : '#dc2626', fontSize: 16 }}>{activePersona}</Text>
+        </Text>
       </View>
+
+      {/* MANUAL TEST CONTROLS (Hidden when testing real face detection) */}
+      {isSimulating && (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
+            <TouchableOpacity 
+              onPress={() => setTestState("Normal")}
+               style={[styles.testButton, testState === "Normal" && styles.testButtonActive]}
+            >
+              <Text style={[styles.testButtonText, testState === "Normal" && styles.testButtonTextActive]}>Normal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setTestState("Drowsy")}
+              style={[styles.testButton, testState === "Drowsy" && styles.testButtonActive]}
+            >
+              <Text style={[styles.testButtonText, testState === "Drowsy" && styles.testButtonTextActive]}>Drowsy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+               onPress={() => setTestState("Sleep")}
+               style={[styles.testButton, testState === "Sleep" && styles.testButtonActive]}
+            >
+              <Text style={[styles.testButtonText, testState === "Sleep" && styles.testButtonTextActive]}>Asleep</Text>
+            </TouchableOpacity>
+        </View>
+      )}
 
       {/* MAP */}
       <View style={styles.mapWrapper}>
@@ -387,11 +461,14 @@ export default function DriverMonitorScreen({ navigation, route }) {
       {/* STOP BUTTON */}
       <TouchableOpacity 
          onPress={() => {
+             const driveTimeMs = Date.now() - startTime;
              const tripData = {
                  date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
                  route: `${start || "Unknown"} → ${end || "Unknown"}`,
                  vehicle: `${vehicleName || user?.vehicleType || "Car"} (${vehicleNumber || user?.vehicleNumber || "Unknown"})`,
-                 alertsCount: alerts.length
+                 alertsCount: alerts.length,
+                 driveTime: driveTimeMs,
+                 distance: tripDistance
              };
              navigation.replace("TripFeedback", { tripData });
          }} 
