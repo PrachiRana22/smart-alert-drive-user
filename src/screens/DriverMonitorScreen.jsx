@@ -332,8 +332,8 @@ export default function DriverMonitorScreen({ navigation, route }) {
       <View style={styles.header}>
         <Text style={styles.title}>Smart Drive</Text>
         <View>
-          <Text style={styles.boldText}>Vehicle : {vehicleName || "Car"}</Text>
-          <Text style={styles.grayText}>Number : {vehicleNumber || "GJ-00-0000"}</Text>
+          <Text style={styles.boldText}>Vehicle : {vehicleName || user?.vehicleType || user?.vehicles?.[0]?.type || "Car"}</Text>
+          <Text style={styles.grayText}>Number : {vehicleNumber || user?.vehicleNumber || user?.vehicles?.[0]?.number || "GJ-00-0000"}</Text>
         </View>
       </View>
 
@@ -465,7 +465,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
              const tripData = {
                  date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
                  route: `${start || "Unknown"} → ${end || "Unknown"}`,
-                 vehicle: `${vehicleName || user?.vehicleType || "Car"} (${vehicleNumber || user?.vehicleNumber || "Unknown"})`,
+                 vehicle: `${vehicleName || user?.vehicleType || user?.vehicles?.[0]?.type || "Car"} (${vehicleNumber || user?.vehicleNumber || user?.vehicles?.[0]?.number || "Unknown"})`,
                  alertsCount: alerts.length,
                  driveTime: driveTimeMs,
                  distance: tripDistance

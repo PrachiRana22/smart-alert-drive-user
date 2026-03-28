@@ -67,7 +67,7 @@ export default function DriverProfileScreen() {
                 </View>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.vehicleType || "Not Added"}
+                    {user?.vehicleType || user?.vehicles?.[0]?.type || "Not Added"}
                 </Text>
 
                 {/* Vehicle Number */}
@@ -76,7 +76,7 @@ export default function DriverProfileScreen() {
                 </Text>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.vehicleNumber || "Not Added"}
+                    {user?.vehicleNumber || user?.vehicles?.[0]?.number || "Not Added"}
                 </Text>
 
                 {/* License Number */}
@@ -132,7 +132,7 @@ export default function DriverProfileScreen() {
                             Vehicle
                         </Text>
                         <Text className="font-outfit-bold text-slate-800 dark:text-white mb-2">
-                            {recentTrip.vehicle || user?.vehicleType || "Not Set"}
+                            {recentTrip.vehicle || user?.vehicleType || user?.vehicles?.[0]?.type || "Not Set"}
                         </Text>
 
                         <Text className="font-outfit text-slate-500 dark:text-slate-400">
