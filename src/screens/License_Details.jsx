@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
-  Image
+  Image,
+  ActivityIndicator
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,7 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { AuthContext } from "../context/AuthContext";
 
 export default function LicenseDetails({ navigation }) {
-  const { setIsLicenseDone, setLicenseData } = useContext(AuthContext);
+  const { setIsLicenseDone, setLicenseData, updateLicense, logout, user } = useContext(AuthContext);
 
   // Split License States for Gujarat Format
   const [licensePrefix, setLicensePrefix] = useState("GJ"); // e.g., GJ12
@@ -30,16 +31,48 @@ export default function LicenseDetails({ navigation }) {
   const [image, setImage] = useState(null);
   const [licenseType, setLicenseType] = useState("LL");
   const [status, setStatus] = useState("");
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
+
+  useEffect(() => {
+    if (licensePrefix.length === 4 && licenseRest.length === 11) {
+      const fullLicense = (licensePrefix + licenseRest).toUpperCase().replace(/\s/g, "");
+      const regex = /^[A-Z]{2}[0-9]{2}[0-9]{11}$/;
+
+      if (regex.test(fullLicense)) {
+        setIsFetchingInfo(true);
+        setTimeout(() => {
+          setIsFetchingInfo(false);
+          // Pull name from user context if available, otherwise fallback
+          const autoName = user?.first_name 
+            ? `${user.first_name} ${user.last_name || ""}`.trim()
+            : "Rahul Sharma";
+            
+          setName(autoName);
+          setDob("1998-05-15");
+          setLicenseType("DL");
+          const mockIssueDate = "2023-01-10";
+          setIssueDate(mockIssueDate);
+          
+          let d = new Date(mockIssueDate);
+          d.setFullYear(d.getFullYear() + 20); // DL validity is usually 20 years
+          const formatted = d.toISOString().split("T")[0];
+          setValidDate(formatted);
+          setStatus(d >= new Date() ? "Valid ✅" : "Expired ❌");
+        }, 1500);
+      }
+    }
+  }, [licensePrefix, licenseRest, user]);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 1,
+      quality: 0.5, // Slightly lower quality for smaller Base64 size
+      base64: true,
     });
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0].base64);
     }
   };
 
@@ -55,11 +88,11 @@ export default function LicenseDetails({ navigation }) {
     setStatus(d >= new Date() ? "Valid ✅" : "Expired ❌");
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const fullLicense = (licensePrefix + licenseRest).toUpperCase().replace(/\s/g, "");
     
-    // Regex: GJ + 2 digits + 11 digits = 15 Total
-    const regex = /^GJ[0-9]{2}[0-9]{11}$/;
+    // Regex: 2 State Letters + 2 digits + 11 digits = 15 Total
+    const regex = /^[A-Z]{2}[0-9]{2}[0-9]{11}$/;
 
     if (!licensePrefix || !licenseRest || !name || !dob || !issueDate || !image) {
       Alert.alert("Error", "Please fill all fields and upload a photo.");
@@ -67,21 +100,35 @@ export default function LicenseDetails({ navigation }) {
     }
 
     if (!regex.test(fullLicense)) {
-      Alert.alert("Invalid Format", "Please enter a valid  License number.\nExample: GJ12 + 20230012345");
+      Alert.alert("Invalid Format", "Please enter a valid License number.\nExample: GJ12 + 20230012345 (State Code + 13 Digits)");
       return;
     }
 
-    setLicenseData({ name, licenseNumber: fullLicense, image });
-    setIsLicenseDone(true);
-    navigation.replace("VehicleDetails");
+    try {
+      // SAVE TO BACKEND (Now includes profile_image as Base64, and added issue_date and license_type)
+      await updateLicense({
+        full_name: name,
+        license_number: fullLicense,
+        dob: dob,
+        issue_date: issueDate,
+        license_type: licenseType,
+        profile_image: image // This is now the Base64 string
+      });
+
+      setLicenseData({ name, licenseNumber: fullLicense, image });
+      setIsLicenseDone(true);
+      navigation.replace("VehicleDetails");
+    } catch (error) {
+      Alert.alert("Error", "Failed to save license details to server.");
+    }
   };
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.replace("Login")}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+        <TouchableOpacity onPress={() => logout()}>
+          <Ionicons name="log-out-outline" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.title}>License Details</Text>
         <Ionicons name="card-outline" size={24} color="#2563eb" />
@@ -92,7 +139,7 @@ export default function LicenseDetails({ navigation }) {
         <TouchableOpacity onPress={pickImage}>
           <View style={styles.imageWrapper}>
             {image ? (
-              <Image source={{ uri: image }} style={styles.image} />
+              <Image source={{ uri: `data:image/jpeg;base64,${image}` }} style={styles.image} />
             ) : (
               <Ionicons name="person-circle-outline" size={90} color="#94a3b8" />
             )}
@@ -134,7 +181,10 @@ export default function LicenseDetails({ navigation }) {
             style={[styles.input, { flex: 0.7, marginLeft: 10 }]}
           />
         </View>
-        <Text style={styles.suggestionText}>Format: RTO Code (GJ12) +  Serial No.</Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+          <Text style={styles.suggestionText}>Format: RTO Code (e.g. GJ12) +  Serial No.</Text>
+          {isFetchingInfo && <ActivityIndicator color="#2563eb" size="small" />}
+        </View>
 
         <Text style={styles.label}>Full Name</Text>
         <TextInput

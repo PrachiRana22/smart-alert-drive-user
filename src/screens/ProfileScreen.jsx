@@ -1,26 +1,52 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { User, Lock, Pencil, ChevronLeft } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../context/AuthContext';
 
 export default function ProfileScreen() {
     const navigation = useNavigation();
-    const { user } = React.useContext(AuthContext);
+    const { user, updateUser, updatePersona } = React.useContext(AuthContext);
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
 
     // Form states
-    const [username, setUsername] = useState(user?.name || '');
+    const [username, setUsername] = useState(user?.full_name || user?.username || '');
     const [password, setPassword] = useState('');
-    const [profileData, setProfileData] = useState('');
+    const [profileData, setProfileData] = useState(user?.email || '');
     const [persona, setPersona] = useState(user?.persona || 'Normal');
-    const { updatePersona } = React.useContext(AuthContext);
+    const [profileImage, setProfileImage] = useState(user?.profile_image || null);
 
-    const handleDone = () => {
-        if (updatePersona) updatePersona(persona);
-        navigation.goBack();
+    const pickImage = async () => {
+        // No permissions request is necessary for launching the image library
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.3,
+            base64: true,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            const asset = result.assets[0];
+            setProfileImage(asset.base64);
+        }
+    };
+
+    const handleDone = async () => {
+        try {
+            await updateUser({ 
+                full_name: username,
+                persona: persona,
+                email: profileData,
+                profile_image: profileImage
+            });
+            navigation.goBack();
+        } catch (error) {
+            alert("Failed to update profile");
+        }
     };
 
     return (
@@ -41,9 +67,20 @@ export default function ProfileScreen() {
             <ScrollView className="flex-1 px-6 pt-10" showsVerticalScrollIndicator={false}>
                 {/* Profile Picture Placeholder */}
                 <View className="items-center mb-10 mt-2">
-                    <View className="w-32 h-32 rounded-full border-4 border-white dark:border-slate-800 items-center justify-center bg-gray-100 dark:bg-slate-700 shadow-md relative">
-                        <User size={56} strokeWidth={1.5} color={isDark ? "#94A3B8" : "#CBD5E1"} />
-                        <TouchableOpacity className="absolute bottom-0 right-0 bg-primary p-3 rounded-full shadow-md shadow-primary/40 border-2 border-white dark:border-slate-800 active:scale-95 transition-transform">
+                    <View className="w-32 h-32 rounded-full border-4 border-white dark:border-slate-800 items-center justify-center bg-gray-100 dark:bg-slate-700 shadow-md relative overflow-hidden">
+                        {profileImage ? (
+                            <Image 
+                                source={{ uri: profileImage.startsWith('data:') ? profileImage : `data:image/jpeg;base64,${profileImage}` }} 
+                                className="w-full h-full"
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <User size={56} strokeWidth={1.5} color={isDark ? "#94A3B8" : "#CBD5E1"} />
+                        )}
+                        <TouchableOpacity 
+                            onPress={pickImage}
+                            className="absolute bottom-0 right-0 bg-primary p-3 rounded-full shadow-md shadow-primary/40 border-2 border-white dark:border-slate-800 active:scale-95 transition-transform"
+                        >
                             <Pencil color="#FFFFFF" size={16} />
                         </TouchableOpacity>
                     </View>

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { MapPin, Navigation, ArrowLeft, Home, Map as MapIcon, Bell, Search } from 'lucide-react-native';
+import { MapPin, Navigation, ArrowLeft, Home, Map as MapIcon, Bell, Search, X, Map } from 'lucide-react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { useColorScheme } from 'nativewind';
 import polyline from '@mapbox/polyline';
+import { AuthContext } from '../context/AuthContext';
 import * as Location from 'expo-location';
 
 // Remove Google Maps API key reference
@@ -12,6 +13,11 @@ import * as Location from 'expo-location';
 export default function TripSetupScreen({ navigation }) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { saveTrip, vehicles, fetchVehicles, user } = React.useContext(AuthContext);
+  
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [startCoords, setStartCoords] = useState(null);
@@ -24,42 +30,52 @@ export default function TripSetupScreen({ navigation }) {
   const [endSuggestions, setEndSuggestions] = useState([]);
   const [showStartSuggestions, setShowStartSuggestions] = useState(false);
   const [showEndSuggestions, setShowEndSuggestions] = useState(false);
+  const [isSearchingStart, setIsSearchingStart] = useState(false);
+  const [isSearchingEnd, setIsSearchingEnd] = useState(false);
   const mapRef = useRef(null);
 
   // Debounced API Fetches for Autocomplete
   useEffect(() => {
-    const delay = setTimeout(() => {
-      if (showStartSuggestions && start.length > 2) {
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(start)}&format=json&addressdetails=1&limit=5&countrycodes=in`, {
-          headers: {
-            'User-Agent': 'SmartDriveApp/1.0 (contact@smartdrive.com)'
-          }
-        })
-          .then(res => res.json())
-          .then(data => setStartSuggestions(data))
-          .catch(err => console.log(err));
+    const delay = setTimeout(async () => {
+      if (showStartSuggestions && start.length > 2 && !startCoords) {
+        setIsSearchingStart(true);
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(start)}&format=json&addressdetails=1&limit=5&countrycodes=in`, {
+            headers: { 'User-Agent': 'SmartDrive_UserSide/1.0 (contact@smartdrive.com)' }
+          });
+          const data = await response.json();
+          setStartSuggestions(data);
+        } catch (err) {
+          console.log("Start Search Error:", err);
+        } finally {
+          setIsSearchingStart(false);
+        }
       } else {
         setStartSuggestions([]);
       }
-    }, 500);
+    }, 600);
     return () => clearTimeout(delay);
   }, [start, showStartSuggestions]);
 
   useEffect(() => {
-    const delay = setTimeout(() => {
-      if (showEndSuggestions && end.length > 2) {
-        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(end)}&format=json&addressdetails=1&limit=5&countrycodes=in`, {
-          headers: {
-            'User-Agent': 'SmartDriveApp/1.0 (contact@smartdrive.com)'
-          }
-        })
-          .then(res => res.json())
-          .then(data => setEndSuggestions(data))
-          .catch(err => console.log(err));
+    const delay = setTimeout(async () => {
+      if (showEndSuggestions && end.length > 2 && !endCoords) {
+        setIsSearchingEnd(true);
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(end)}&format=json&addressdetails=1&limit=5&countrycodes=in`, {
+            headers: { 'User-Agent': 'SmartDrive_UserSide/1.0 (contact@smartdrive.com)' }
+          });
+          const data = await response.json();
+          setEndSuggestions(data);
+        } catch (err) {
+          console.log("End Search Error:", err);
+        } finally {
+          setIsSearchingEnd(false);
+        }
       } else {
         setEndSuggestions([]);
       }
-    }, 500);
+    }, 600);
     return () => clearTimeout(delay);
   }, [end, showEndSuggestions]);
 
@@ -73,6 +89,37 @@ export default function TripSetupScreen({ navigation }) {
     setEnd(item.display_name);
     setEndCoords({ latitude: parseFloat(item.lat), longitude: parseFloat(item.lon) });
     setShowEndSuggestions(false);
+  };
+
+  const useCurrentLocation = async () => {
+    setLoading(true);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permission Denied", "Location permission is required.");
+        setLoading(false);
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({});
+      const coords = { latitude: location.coords.latitude, longitude: location.coords.longitude };
+      setStartCoords(coords);
+      
+      // Reverse geocode to get city/area name
+      const reverse = await Location.reverseGeocodeAsync(coords);
+      if (reverse.length > 0) {
+        const addr = reverse[0];
+        setStart(`${addr.name || addr.street || ""}, ${addr.city || addr.region || ""}`.trim().replace(/^,/, ''));
+      } else {
+        setStart("Current Location");
+      }
+      
+      setShowStartSuggestions(false);
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Could not get current location.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchRoute = async () => {
@@ -171,18 +218,45 @@ export default function TripSetupScreen({ navigation }) {
     }
   };
 
-  const startTrip = () => {
+  const startTrip = async () => {
     if (start === "" || end === "") {
       Alert.alert("Error", "Please enter start and destination");
       return;
     }
 
-    navigation.navigate('DriverMonitor', {
-      start: start,
-      end: end,
-      routeCoords: routeCoordinates,
-      destinationCoords: endCoords
-    });
+    if (vehicles.length === 0) {
+      Alert.alert("No Vehicle Found", "Please add a vehicle in your profile settings before starting a trip.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const tripData = {
+        vehicle: vehicles[0].id, // Default to first vehicle
+        start_time: new Date().toISOString(),
+        start_location: start,
+        end_location: end,
+        distance_km: distance || 0,
+        status: 'ONGOING'
+      };
+
+      const savedTrip = await saveTrip(tripData);
+
+      navigation.navigate('DriverMonitor', {
+        tripId: savedTrip.id,
+        start: start,
+        end: end,
+        routeCoords: routeCoordinates,
+        destinationCoords: endCoords,
+        vehicleId: vehicles[0].id,
+        vehicleName: `${vehicles[0].make} ${vehicles[0].model}`.trim() || vehicles[0].make || 'Unknown',
+        vehicleNumber: vehicles[0].license_plate || 'Not Set'
+      });
+    } catch (error) {
+      Alert.alert("Trip Error", "Could not start trip on backend. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -201,59 +275,118 @@ export default function TripSetupScreen({ navigation }) {
           <Text className="text-3xl font-bold text-blue-600 dark:text-blue-400">Smart Drive Alert</Text>
         </View>
 
-        {/* Start Location */}
-        <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl mb-2 flex-row items-center shadow-sm z-50 border border-transparent dark:border-slate-700">
-          <MapPin size={20} color={isDark ? "#60A5FA" : "#2563eb"} />
-          <TextInput
-            placeholder="Start Location (e.g., Paldi)"
-            value={start}
-            onChangeText={(text) => { setStart(text); setShowStartSuggestions(true); setStartCoords(null); }}
-            onFocus={() => { if(start.length > 2) setShowStartSuggestions(true); setShowEndSuggestions(false); }}
-            className="ml-3 flex-1 text-base text-slate-800 dark:text-gray-100"
-            placeholderTextColor="#9ca3af"
-          />
+        {/* Start Location Input */}
+        <View className="z-50 mb-4">
+          <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex-row items-center shadow-sm border border-transparent dark:border-slate-700">
+            <MapPin size={20} color={isDark ? "#60A5FA" : "#2563eb"} />
+            <TextInput
+              placeholder="Start Location (e.g., Paldi)"
+              value={start}
+              onChangeText={(text) => { setStart(text); setShowStartSuggestions(true); setStartCoords(null); }}
+              onFocus={() => { if(start.length > 2) setShowStartSuggestions(true); setShowEndSuggestions(false); }}
+              className="ml-3 flex-1 text-base text-slate-800 dark:text-gray-100"
+              placeholderTextColor="#9ca3af"
+            />
+            {isSearchingStart ? (
+               <ActivityIndicator size="small" color="#2563eb" className="ml-2" />
+            ) : start.length > 0 && (
+              <TouchableOpacity onPress={() => { setStart(""); setStartSuggestions([]); setStartCoords(null); }}>
+                <X size={20} color="#94a3af" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Start Suggestions */}
+          {showStartSuggestions && (startSuggestions.length > 0 || isSearchingStart) && (
+            <View className="absolute top-[60px] left-0 right-0 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden z-[100]">
+              {isSearchingStart && startSuggestions.length === 0 ? (
+                 <View className="p-4 items-center">
+                   <Text className="text-slate-400">Searching locations...</Text>
+                 </View>
+              ) : (
+                startSuggestions.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    className="p-4 border-b border-gray-50 dark:border-slate-700 flex-row items-center"
+                    onPress={() => handleSelectStart(item)}
+                  >
+                    <Map size={18} color="#94a3af" className="mr-3" />
+                    <View className="flex-1">
+                      <Text className="text-slate-800 dark:text-gray-100 font-medium" numberOfLines={1}>
+                        {item.display_name.split(',')[0]}
+                      </Text>
+                      <Text className="text-slate-400 text-xs" numberOfLines={1}>
+                        {item.display_name.split(',').slice(1).join(',').trim()}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
+
+          {/* Current Location Button */}
+          <TouchableOpacity 
+            onPress={useCurrentLocation} 
+            className="flex-row items-center mt-2 px-1"
+          >
+            <View className="bg-blue-50 dark:bg-blue-900/40 p-1.5 rounded-full mr-2">
+              <Navigation size={14} color="#2563eb" />
+            </View>
+            <Text className="text-blue-600 dark:text-blue-400 font-medium text-sm">Use Current Location</Text>
+          </TouchableOpacity>
         </View>
 
-        {showStartSuggestions && startSuggestions.length > 0 && (
-          <View className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-100 dark:border-slate-700 mb-4 overflow-hidden -mt-1 z-40">
-            {startSuggestions.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                className={`p-3 border-b border-gray-100 dark:border-slate-700 ${index === startSuggestions.length - 1 ? 'border-b-0' : ''}`}
-                onPress={() => handleSelectStart(item)}
-              >
-                <Text className="text-slate-800 dark:text-gray-200 font-medium" numberOfLines={2}>{item.display_name}</Text>
+        {/* End Location Input */}
+        <View className="z-40 mb-6">
+          <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex-row items-center shadow-sm border border-transparent dark:border-slate-700">
+            <Navigation size={20} color={isDark ? "#60A5FA" : "#2563eb"} />
+            <TextInput
+              placeholder="Destination (e.g., Vadodara)"
+              value={end}
+              onChangeText={(text) => { setEnd(text); setShowEndSuggestions(true); setEndCoords(null); }}
+              onFocus={() => { if(end.length > 2) setShowEndSuggestions(true); setShowStartSuggestions(false); }}
+              className="ml-3 flex-1 text-base text-slate-800 dark:text-gray-100"
+              placeholderTextColor="#9ca3af"
+            />
+            {isSearchingEnd ? (
+               <ActivityIndicator size="small" color="#2563eb" className="ml-2" />
+            ) : end.length > 0 && (
+              <TouchableOpacity onPress={() => { setEnd(""); setEndSuggestions([]); setEndCoords(null); }}>
+                <X size={20} color="#94a3af" />
               </TouchableOpacity>
-            ))}
+            )}
           </View>
-        )}
 
-        {/* End Location */}
-        <View className={`bg-white dark:bg-slate-800 p-4 rounded-2xl flex-row items-center shadow-sm z-30 ${showStartSuggestions ? 'mt-2' : ''} mb-2 border border-transparent dark:border-slate-700`}>
-          <Navigation size={20} color={isDark ? "#60A5FA" : "#2563eb"} />
-          <TextInput
-            placeholder="Destination (e.g., Vadodara)"
-            value={end}
-            onChangeText={(text) => { setEnd(text); setShowEndSuggestions(true); setEndCoords(null); }}
-            onFocus={() => { if(end.length > 2) setShowEndSuggestions(true); setShowStartSuggestions(false); }}
-            className="ml-3 flex-1 text-base text-slate-800 dark:text-gray-100"
-            placeholderTextColor="#9ca3af"
-          />
+          {/* End Suggestions */}
+          {showEndSuggestions && (endSuggestions.length > 0 || isSearchingEnd) && (
+            <View className="absolute top-[60px] left-0 right-0 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden z-[100]">
+              {isSearchingEnd && endSuggestions.length === 0 ? (
+                 <View className="p-4 items-center">
+                   <Text className="text-slate-400">Searching locations...</Text>
+                 </View>
+              ) : (
+                endSuggestions.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    className="p-4 border-b border-gray-50 dark:border-slate-700 flex-row items-center"
+                    onPress={() => handleSelectEnd(item)}
+                  >
+                    <Map size={18} color="#94a3af" className="mr-3" />
+                    <View className="flex-1">
+                      <Text className="text-slate-800 dark:text-gray-100 font-medium" numberOfLines={1}>
+                        {item.display_name.split(',')[0]}
+                      </Text>
+                      <Text className="text-slate-400 text-xs" numberOfLines={1}>
+                        {item.display_name.split(',').slice(1).join(',').trim()}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
         </View>
-
-        {showEndSuggestions && endSuggestions.length > 0 && (
-          <View className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-100 dark:border-slate-700 mb-6 overflow-hidden -mt-1 z-20">
-            {endSuggestions.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                className={`p-3 border-b border-gray-100 dark:border-slate-700 ${index === endSuggestions.length - 1 ? 'border-b-0' : ''}`}
-                onPress={() => handleSelectEnd(item)}
-              >
-                <Text className="text-slate-800 dark:text-gray-200 font-medium" numberOfLines={2}>{item.display_name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
 
         {/* Find Route Button */}
         <TouchableOpacity

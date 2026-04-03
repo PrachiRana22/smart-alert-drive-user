@@ -6,23 +6,25 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../context/AuthContext";
 
 export default function VehicleDetailsScreen({ navigation }) {
-  const { user, setUser, licenseData } = useContext(AuthContext);
+  const { user, updateUser, licenseData, saveVehicle } = useContext(AuthContext);
 
   const [mobile, setMobile] = useState("");
   const [emergency, setEmergency] = useState("");
 
-  // Vehicles state with split number: prefix (GJ01) and rest (AB1234)
+  // Vehicles state with brand, model, year, and license plate
   const [vehicles, setVehicles] = useState([
-    { vehicleType: "", vPrefix: "GJ", vRest: "" }
+    { vehicleType: "Car", make: "", model: "", year: "2024", vPrefix: "GJ", vRest: "" }
   ]);
 
   const [showSecond, setShowSecond] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleVehicleChange = (index, field, value) => {
     const updated = [...vehicles];
@@ -31,15 +33,13 @@ export default function VehicleDetailsScreen({ navigation }) {
   };
 
   const addVehicle = () => {
-    setVehicles([...vehicles, { vehicleType: "", vPrefix: "GJ", vRest: "" }]);
+    setVehicles([...vehicles, { vehicleType: "Car", make: "", model: "", year: "2024", vPrefix: "GJ", vRest: "" }]);
     setShowSecond(true);
   };
 
-  // Validation Function
+  // ... (validateData function stays the same)
   const validateData = () => {
     const phoneRegex = /^[0-9]{10}$/;
-    const vRestRegex = /^[A-Z]{1,2}[0-9]{1,4}$/; // Matches AB1234 or A123
-
     if (!phoneRegex.test(mobile)) {
       Alert.alert("Invalid Mobile", "Please enter a valid 10-digit mobile number.");
       return false;
@@ -48,38 +48,60 @@ export default function VehicleDetailsScreen({ navigation }) {
       Alert.alert("Invalid Emergency Contact", "Please enter a 10-digit emergency number.");
       return false;
     }
-    if (mobile === emergency) {
-      Alert.alert("Error", "Mobile and Emergency numbers cannot be the same.");
-      return false;
+    for (const v of vehicles) {
+      if (!v.make || !v.model || !v.year || !v.vRest) {
+        Alert.alert("Missing Info", "Please fill all details (Make, Model, Year, Number) for your vehicle.");
+        return false;
+      }
     }
-
-    // Check Vehicle 1
-    if (!vehicles[0].vehicleType || !vehicles[0].vRest) {
-      Alert.alert("Vehicle 1 Required", "Please select type and enter number for Vehicle 1.");
-      return false;
-    }
-
     return true;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateData()) return;
+    setIsSaving(true);
 
-    const formattedVehicles = vehicles.map(v => ({
-      type: v.vehicleType,
-      number: (v.vPrefix + v.vRest).toUpperCase()
-    }));
+    try {
+      // 1. UPDATE USER PROFILE (Mobile, Emergency)
+      await updateUser({
+        mobile_number: "+91" + mobile,
+        emergency_contact: "+91" + emergency
+      });
 
-    const updatedUser = {
-      ...user,
-      mobile: "+91" + mobile,
-      emergency: "+91" + emergency,
-      licenseNumber: licenseData?.licenseNumber,
-      vehicles: formattedVehicles
-    };
+      // 2. SAVE VEHICLES (Mapping to Backend: make, model, year, license_plate)
+      for (const v of vehicles) {
+        if (v.vRest) {
+          const payload = {
+            make: v.make,
+            model: v.model,
+            year: parseInt(v.year),
+            license_plate: (v.vPrefix + v.vRest).toUpperCase()
+          };
+          console.log("Saving Vehicle Payload:", payload);
+          await saveVehicle(payload);
+        }
+      }
 
-    setUser(updatedUser);
-    navigation.replace("Home");
+      navigation.replace("Home");
+    } catch (error) {
+      console.error("Save Error Response:", error.response?.data);
+      let errorMsg = "Failed to save details.";
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data === 'object') {
+          errorMsg = Object.entries(data)
+            .map(([key, val]) => `${key}: ${val}`)
+            .join("\n");
+        } else {
+          errorMsg = data.toString();
+        }
+      }
+      
+      Alert.alert("Registration Error", errorMsg);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -140,6 +162,7 @@ export default function VehicleDetailsScreen({ navigation }) {
       {vehicles.map((v, index) => (
         <View key={index} style={styles.vehicleCard}>
           <Text style={styles.vehicleTitle}>Vehicle {index + 1}</Text>
+          
           <View style={styles.typeRow}>
             {["2 Wheeler", "Car", "Bus", "Truck"].map((type) => (
               <TouchableOpacity
@@ -152,24 +175,62 @@ export default function VehicleDetailsScreen({ navigation }) {
             ))}
           </View>
 
-          <View style={styles.phoneRow}>
-            <TextInput
-              value={v.vPrefix}
-              onChangeText={(text) => handleVehicleChange(index, "vPrefix", text)}
-              maxLength={4}
-              autoCapitalize="characters"
-              style={[styles.input, { width: 80, textAlign: 'center', fontWeight: 'bold' }]}
-            />
-            <TextInput
-              placeholder="e.g. AB1234"
-              value={v.vRest}
-              onChangeText={(text) => handleVehicleChange(index, "vRest", text)}
-              maxLength={7}
-              autoCapitalize="characters"
-              style={[styles.input, { flex: 1, marginLeft: 10 }]}
-            />
+          {/* New Fields: Make & Model */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.label}>Brand/Make</Text>
+              <TextInput
+                placeholder="e.g. Toyota"
+                value={v.make}
+                onChangeText={(text) => handleVehicleChange(index, "make", text)}
+                style={styles.input}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Model Name</Text>
+              <TextInput
+                placeholder="e.g. Fortuner"
+                value={v.model}
+                onChangeText={(text) => handleVehicleChange(index, "model", text)}
+                style={styles.input}
+              />
+            </View>
           </View>
-          <Text style={styles.hint}>Format: GJ01 + AB1234</Text>
+
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.label}>Manufacture Year</Text>
+              <TextInput
+                placeholder="Year"
+                value={v.year}
+                onChangeText={(text) => handleVehicleChange(index, "year", text)}
+                keyboardType="numeric"
+                maxLength={4}
+                style={styles.input}
+              />
+            </View>
+            <View style={{ flex: 1.5 }}>
+              <Text style={styles.label}>Vehicle Number</Text>
+              <View style={styles.phoneRow}>
+                <TextInput
+                  value={v.vPrefix}
+                  onChangeText={(text) => handleVehicleChange(index, "vPrefix", text)}
+                  maxLength={4}
+                  autoCapitalize="characters"
+                  style={[styles.input, { width: 60, textAlign: 'center', fontWeight: 'bold' }]}
+                />
+                <TextInput
+                  placeholder="AB12"
+                  value={v.vRest}
+                  onChangeText={(text) => handleVehicleChange(index, "vRest", text)}
+                  maxLength={7}
+                  autoCapitalize="characters"
+                  style={[styles.input, { flex: 1, marginLeft: 5 }]}
+                />
+              </View>
+            </View>
+          </View>
+          <Text style={styles.hint}>Example: GJ01 AB1234</Text>
         </View>
       ))}
 
@@ -180,8 +241,16 @@ export default function VehicleDetailsScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity style={styles.button} onPress={handleSave}>
-        <Text style={styles.buttonText}>Finish Setup</Text>
+      <TouchableOpacity 
+        style={[styles.button, isSaving && { opacity: 0.7 }]} 
+        onPress={handleSave}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Finish Setup</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );

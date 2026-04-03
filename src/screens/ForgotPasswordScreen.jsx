@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Mail, KeyRound, ArrowLeft } from 'lucide-react-native';
 
@@ -15,10 +15,15 @@ export default function ForgotPasswordScreen() {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 bg-background"
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-            <View className="flex-1 px-8 pt-16">
+            <ScrollView 
+                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 32, paddingBottom: 40, paddingTop: 64, justifyContent: 'center' }} 
+                keyboardShouldPersistTaps="handled"
+                className="bg-background"
+            >
+                <View className="w-full max-w-md self-center">
                 {/* Back Button */}
                 <TouchableOpacity
                     className="w-10 h-10 bg-surface rounded-full items-center justify-center shadow-sm mb-8"
@@ -63,7 +68,7 @@ export default function ForgotPasswordScreen() {
                         Send Reset Link
                     </Text>
                 </TouchableOpacity>
-            </View>
+            </View></ScrollView>
         </KeyboardAvoidingView>
     );
 }

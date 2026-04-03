@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, User, ShieldCheck, Bell, HardDrive, Globe, RefreshCw, HelpCircle, LogOut, ChevronRight, Sun } from 'lucide-react-native';
+import { ChevronLeft, User, ShieldCheck, Bell, HardDrive, Globe, RefreshCw, HelpCircle, LogOut, ChevronRight, Sun, Users } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { AuthContext } from '../context/AuthContext';
 import { useTranslation } from '../locales';
@@ -15,10 +15,6 @@ export default function SettingsScreen() {
 
     const handleLogout = () => {
         logout();
-        navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-        });
     };
 
     const SettingItem = ({ icon: Icon, title, onPress, isLogout }) => (
@@ -58,6 +54,7 @@ export default function SettingsScreen() {
                 <Text className="text-sm font-outfit-bold text-gray-500 dark:text-gray-400 mb-2">{t('settings.account')}</Text>
                 <View className="bg-surface dark:bg-slate-800 rounded-2xl mb-6 shadow-sm border border-gray-100 dark:border-gray-800 px-4">
                     <SettingItem icon={User} title={t('settings.driverProfile')} onPress={() => navigation.navigate('DriverProfile')} />
+                    <SettingItem icon={Users} title="Emergency Contacts" onPress={() => navigation.navigate('EmergencyContacts')} />
                     <SettingItem icon={Globe} title={t('settings.appLanguage')} onPress={() => navigation.navigate('AppLanguage')} />
                     <SettingItem icon={Sun} title={t('settings.displayTheme')} onPress={() => navigation.navigate('DisplayTheme')} />
                     <SettingItem icon={ShieldCheck} title={t('settings.privacy')} onPress={() => navigation.navigate('Privacy')} />

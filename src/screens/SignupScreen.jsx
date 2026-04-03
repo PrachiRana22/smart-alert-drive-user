@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Mail, Lock, User, ShieldCheck } from 'lucide-react-native';
+import { Mail, Lock, User, ShieldCheck, Eye, EyeOff } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 
 export default function SignupScreen() {
@@ -11,35 +11,60 @@ export default function SignupScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    const validateEmail = (email) => {
+        const re = /\S+@\S+\.\S+/;
+        return re.test(email);
+    };
 
     const handleSignup = async () => {
-        if (!name || !email || !password || !confirmPassword) {
+        const trimmedEmail = email.trim().toLowerCase();
+        const trimmedName = name.trim();
+
+        if (!trimmedName || !trimmedEmail || !password || !confirmPassword) {
             return alert("Please fill out all fields.");
+        }
+        if (!validateEmail(trimmedEmail)) {
+            return alert("Please enter a valid email address.");
+        }
+        if (password.length < 6) {
+            return alert("Password must be at least 6 characters long.");
         }
         if (password !== confirmPassword) {
             return alert("Passwords do not match.");
         }
 
         try {
-            await signup(name, email, password);
-            alert("Account created successfully! Please log in.");
-            navigation.navigate('Login');
+            await signup(trimmedName, trimmedEmail, password);
+            // No need to navigate here, the AppNavigator will see the 'user' state change 
+            // and automatically switch to the Home screen (AppStack).
         } catch (error) {
-            alert(error);
+            const message = typeof error === 'object' ? JSON.stringify(error) : error;
+            alert(message);
         }
     };
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 bg-background"
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-                <View className="flex-1 px-8 justify-center min-h-screen pb-10 pt-16">
+            <ScrollView 
+                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 32, paddingBottom: 40, paddingTop: 64, justifyContent: 'center' }} 
+                keyboardShouldPersistTaps="handled"
+                className="bg-background"
+            >
+                <View className="w-full max-w-md self-center">
                     {/* Header */}
                     <View className="items-center mb-10">
-                        <View className="w-20 h-20 bg-primary/10 rounded-full items-center justify-center mb-6">
-                            <ShieldCheck color="#2563EB" size={40} strokeWidth={1.5} />
+                        <View className="mb-6 shadow-sm">
+                            <Image 
+                                source={require('../../assets/App_Inside_Logo.jpeg')} 
+                                className="w-24 h-24 rounded-3xl"
+                                resizeMode="cover"
+                            />
                         </View>
                         <Text className="text-4xl font-outfit-bold text-secondary mb-2 tracking-tight">Create Account</Text>
                         <Text className="text-gray-500 font-outfit text-center px-4 leading-6">
@@ -79,10 +104,13 @@ export default function SignupScreen() {
                                 className="flex-1 font-outfit text-base text-secondary py-0"
                                 placeholder="Password"
                                 placeholderTextColor="#94A3B8"
-                                secureTextEntry
+                                secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={setPassword}
                             />
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff color="#94A3B8" size={20} /> : <Eye color="#94A3B8" size={20} />}
+                            </TouchableOpacity>
                         </View>
 
                         <View className="flex-row items-center border border-gray-200 bg-surface rounded-2xl px-4 py-3 shadow-sm">
@@ -91,10 +119,13 @@ export default function SignupScreen() {
                                 className="flex-1 font-outfit text-base text-secondary py-0"
                                 placeholder="Confirm Password"
                                 placeholderTextColor="#94A3B8"
-                                secureTextEntry
+                                secureTextEntry={!showConfirmPassword}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
                             />
+                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                {showConfirmPassword ? <EyeOff color="#94A3B8" size={20} /> : <Eye color="#94A3B8" size={20} />}
+                            </TouchableOpacity>
                         </View>
                     </View>
 

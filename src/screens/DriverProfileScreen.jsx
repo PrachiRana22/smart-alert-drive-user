@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Image } from 'react-native';
 import { User, Phone, Mail, Truck, AlertCircle } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { AuthContext } from '../context/AuthContext';
 
 export default function DriverProfileScreen() {
 
-    const { user, trips } = React.useContext(AuthContext);
+    const { user, trips, vehicles, emergencyContacts } = React.useContext(AuthContext);
+    const vehicle = vehicles && vehicles.length > 0 ? vehicles[0] : null;
     const recentTrip = trips?.length > 0 ? trips[trips.length - 1] : user?.recentTrip;
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
@@ -31,7 +32,7 @@ export default function DriverProfileScreen() {
                 </View>
 
                 <Text className="font-outfit-bold text-lg text-slate-800 dark:text-white mb-4">
-                    {user?.name || "Driver"}
+                    {user?.full_name || user?.username || "Driver"}
                 </Text>
 
                 {/* Mobile Number */}
@@ -43,7 +44,7 @@ export default function DriverProfileScreen() {
                 </View>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.mobile || "Not Added"}
+                    {user?.mobile_number || "Not Added"}
                 </Text>
 
                 {/* Emergency Contact */}
@@ -55,28 +56,30 @@ export default function DriverProfileScreen() {
                 </View>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.emergency || "Not Added"}
+                    {emergencyContacts && emergencyContacts.length > 0 
+                        ? `${emergencyContacts[0].name} (${emergencyContacts[0].phone_number})` 
+                        : (user?.emergency_contact || "Not Added")}
                 </Text>
 
-                {/* Vehicle Type */}
+                {/* Vehicle Type (Make/Model) */}
                 <View className="flex-row items-center mb-2">
                     <Truck color={isDark ? "#60A5FA" : "#2563EB"} size={22} />
                     <Text className="ml-3 font-outfit text-slate-500 dark:text-slate-400">
-                        Vehicle Type
+                        Vehicle (Brand & Model)
                     </Text>
                 </View>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.vehicleType || user?.vehicles?.[0]?.type || "Not Added"}
+                    {vehicle ? `${vehicle.make} ${vehicle.model}` : "Not Added"}
                 </Text>
 
-                {/* Vehicle Number */}
+                {/* Vehicle Number (License Plate) */}
                 <Text className="font-outfit text-slate-500 dark:text-slate-400">
                     Vehicle Number
                 </Text>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.vehicleNumber || user?.vehicles?.[0]?.number || "Not Added"}
+                    {vehicle?.license_plate || "Not Added"}
                 </Text>
 
                 {/* License Number */}
@@ -85,20 +88,31 @@ export default function DriverProfileScreen() {
                 </Text>
 
                 <Text className="font-outfit-bold text-slate-800 dark:text-white mb-4">
-                    {user?.licenseNumber || "Not Added"}
+                    {user?.license_number || "Not Added"}
                 </Text>
 
-                {/* Email */}
-                <View className="flex-row items-center mb-2">
-                    <Mail color={isDark ? "#60A5FA" : "#2563EB"} size={22} />
-                    <Text className="ml-3 font-outfit text-slate-500 dark:text-slate-400">
-                        Email
-                    </Text>
+                {/* Email & Profile */}
+                <View className="flex-row items-center mt-2 mb-2">
+                    <View className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700 overflow-hidden border-2 border-white dark:border-slate-800 shadow-sm mr-4">
+                        {user?.profile_image ? (
+                             <Image 
+                                source={{ uri: user.profile_image.startsWith('data:') ? user.profile_image : `data:image/jpeg;base64,${user.profile_image}` }} 
+                                className="w-full h-full"
+                             />
+                        ) : (
+                             <View className="w-full h-full items-center justify-center">
+                                 <User size={30} color={isDark ? "#475569" : "#CBD5E1"} />
+                             </View>
+                        )}
+                    </View>
+                    <View className="flex-1">
+                        <View className="flex-row items-center mb-1">
+                            <Mail color={isDark ? "#60A5FA" : "#2563EB"} size={18} />
+                            <Text className="ml-2 font-outfit text-slate-500 dark:text-slate-400">Email</Text>
+                        </View>
+                        <Text className="font-outfit-bold text-slate-800 dark:text-white" numberOfLines={1}>{user?.email || "driver@email.com"}</Text>
+                    </View>
                 </View>
-
-                <Text className="font-outfit-bold text-slate-800 dark:text-white">
-                    {user?.email || "driver@email.com"}
-                </Text>
 
             </View>
 
@@ -118,28 +132,28 @@ export default function DriverProfileScreen() {
                             Date
                         </Text>
                         <Text className="font-outfit-bold text-slate-800 dark:text-white mb-2">
-                            {recentTrip.date || new Date().toLocaleDateString()}
+                            {recentTrip.date || (recentTrip.start_time ? new Date(recentTrip.start_time).toLocaleDateString() : new Date().toLocaleDateString())}
                         </Text>
 
                         <Text className="font-outfit text-slate-500 dark:text-slate-400">
                             Route
                         </Text>
                         <Text className="font-outfit-bold text-slate-800 dark:text-white mb-2 break-words">
-                            {recentTrip.route || "Recent Route"}
+                            {recentTrip.route || (recentTrip.start_location && recentTrip.end_location ? `${recentTrip.start_location.split(',')[0]} → ${recentTrip.end_location.split(',')[0]}` : "Recent Route")}
                         </Text>
 
                         <Text className="font-outfit text-slate-500 dark:text-slate-400">
                             Vehicle
                         </Text>
                         <Text className="font-outfit-bold text-slate-800 dark:text-white mb-2">
-                            {recentTrip.vehicle || user?.vehicleType || user?.vehicles?.[0]?.type || "Not Set"}
+                            {typeof recentTrip.vehicle === 'string' ? recentTrip.vehicle : (vehicle ? `${vehicle.make} ${vehicle.model}` : "Not Set")}
                         </Text>
 
                         <Text className="font-outfit text-slate-500 dark:text-slate-400">
                             Alerts Triggered
                         </Text>
                         <Text className="font-outfit-bold text-slate-800 dark:text-white">
-                            {recentTrip.alertsCount || 0} Alert{(recentTrip.alertsCount || 0) !== 1 ? 's' : ''}
+                            {recentTrip.alertsCount || recentTrip.alerts_count || 0} Alert{(recentTrip.alertsCount || recentTrip.alerts_count || 0) !== 1 ? 's' : ''}
                         </Text>
 
                     </View>

@@ -7,12 +7,14 @@ import MapView, { Marker, Polyline } from "react-native-maps";
 import polyline from '@mapbox/polyline';
 import * as Location from "expo-location";
 import { Audio } from "expo-av";
+import * as Speech from "expo-speech";
 import { AlertTriangle, ShieldCheck, Square } from "lucide-react-native";
 import { AuthContext } from "../context/AuthContext";
 
 export default function DriverMonitorScreen({ navigation, route }) {
-  const { user } = React.useContext(AuthContext);
+  const { user, reportAlert, updateTripStatus, resolveAlert } = React.useContext(AuthContext);
 
+  const { tripId, start, end, vehicleName, vehicleNumber, routeCoords, destinationCoords } = route.params || {};
   const persona = user?.persona || 'Normal';
   const getThresholds = () => {
     switch (persona) {
@@ -32,6 +34,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
   
   const [location, setLocation] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [allTripAlerts, setAllTripAlerts] = useState([]); // Persistent full trip log for Maps
   const [isSimulating, setIsSimulating] = useState(false); // Make real detection default now
   const [testState, setTestState] = useState("Normal"); // Normal, Drowsy, Sleep
   const testStateRef = useRef(testState);
@@ -53,14 +56,15 @@ export default function DriverMonitorScreen({ navigation, route }) {
   const cameraRef = useRef(null);
   const isProcessingRef = useRef(false);
 
-  const { start, end, vehicleName, vehicleNumber, routeCoords, destinationCoords } = route.params || {};
-
   const [routeCoordinates, setRouteCoordinates] = useState(routeCoords || []);
   const [endCoords, setEndCoords] = useState(destinationCoords || null);
 
   // Distance and Time Tracking
   const [startTime] = useState(Date.now());
   const [tripDistance, setTripDistance] = useState(0); // in meters
+  const currentSpeedRef = useRef(0); // in km/h
+  const lastSpeedAlertTimeRef = useRef(0);
+  const SPEED_LIMIT = 80; // km/h limit
 
   useEffect(() => {
     startLiveLocation();
@@ -152,11 +156,29 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   // Cleanup Sound
   useEffect(() => {
-    return sound ? () => sound.unloadAsync() : undefined;
+    return () => {
+      Speech.stop();
+      if (sound) sound.unloadAsync();
+    };
   }, [sound]);
 
   const playBeep = async (type) => {
     try {
+      // Conversational Assistant Synthesis (Runs alongside Audio Beep)
+      const userName = user?.first_name || "Driver";
+      let speechPhrase = "";
+      
+      if (type === 'Critical') {
+        speechPhrase = `Critical Alert, ${userName}! Wake up immediately!`;
+        Speech.speak(speechPhrase, { rate: 1.1, pitch: 1.2 });
+      } else if (type === 'Speeding') {
+        speechPhrase = `Warning ${userName}, you are over the speed limit. Please slow down!`;
+        Speech.speak(speechPhrase, { rate: 1.0, pitch: 1.0 });
+      } else if (type === 'Moderate') {
+        speechPhrase = `Warning ${userName}, your eyes seem tired. Please focus on the road.`;
+        Speech.speak(speechPhrase, { rate: 1.0, pitch: 1.0 });
+      }
+
       if (sound) {
         await sound.unloadAsync();
       }
@@ -180,6 +202,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   const stopBeep = async () => {
     Vibration.cancel();
+    Speech.stop();
     if (sound) {
       await sound.stopAsync();
       await sound.unloadAsync();
@@ -212,27 +235,49 @@ export default function DriverMonitorScreen({ navigation, route }) {
     }
   };
 
-  const addAlert = (type, message) => {
-    setActivePersona(type); // Dynamically change the persona displaying on screen to the alert type
+  const addAlert = (type, message, specificAlertType = null) => {
+    // Speeding is styled as 'Speeding', but should just reflect 'Moderate' visually on the primary Persona layout
+    setActivePersona(type === 'Speeding' ? 'Moderate' : type); 
     
     const newAlert = {
       id: Date.now().toString(),
-      type, // 'Normal', 'Moderate', 'Critical'
+      type, // 'Normal', 'Moderate', 'Critical', 'Speeding'
       message,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      latitude: location?.latitude,
+      longitude: location?.longitude
     };
-    setAlerts(prev => [newAlert, ...prev].slice(0, 5));
+    setAlerts(prev => [newAlert, ...prev].slice(0, 5)); // UI HUD list
+    setAllTripAlerts(prev => [...prev, newAlert]); // Full heatmap analytics list
 
-    if (type === 'Critical') {
-      Alert.alert(
-        "CRITICAL ALERT",
-        message,
-        [{ text: "I'm Awake", onPress: () => {
-          setEyesClosedFrames(0);
-          stopBeep();
-        }}]
-      );
-    }
+    const reportAndAlert = async () => {
+      let backendId = null;
+      if (tripId) {
+        const res = await reportAlert({
+          trip: tripId,
+          alert_type: specificAlertType ? specificAlertType : (type === 'Critical' ? 'Sleep' : 'Drowsy'),
+          severity: type === 'Critical' ? 'CRITICAL_RISK' : 'MODERATE_RISK',
+          latitude: location?.latitude,
+          longitude: location?.longitude,
+          location: `Lat: ${location?.latitude}, Lon: ${location?.longitude}`,
+          vehicle_speed: currentSpeedRef.current
+        });
+        if (res) backendId = res.id;
+      }
+
+      if (type === 'Critical') {
+        Alert.alert(
+          "CRITICAL ALERT",
+          message,
+          [{ text: "I'm Awake", onPress: () => {
+            setEyesClosedFrames(0);
+            stopBeep();
+            if (backendId) resolveAlert(backendId);
+          }}]
+        );
+      }
+    };
+    reportAndAlert();
   };
 
   const handleFacesDetected = ({ faces }) => {
@@ -291,6 +336,20 @@ export default function DriverMonitorScreen({ navigation, route }) {
       { accuracy: Location.Accuracy.High, timeInterval: 2000, distanceInterval: 1 },
       (loc) => {
         setLocation(loc.coords);
+        const currentSpeedKmh = Math.max(0, (loc.coords.speed || 0) * 3.6);
+        currentSpeedRef.current = currentSpeedKmh; // Convert m/s to km/h
+        
+        // Speeding Check
+        if (currentSpeedKmh > SPEED_LIMIT) {
+          const now = Date.now();
+          if (now - lastSpeedAlertTimeRef.current > 30000) { // 30 sec cooldown
+            lastSpeedAlertTimeRef.current = now;
+            addAlert('Speeding', `Warning: You are overspeeding at ${currentSpeedKmh.toFixed(0)} km/h. Please slow down!`, 'Speeding');
+            playBeep('Moderate'); // Double beep for overspeeding
+            setFaceStatusText(`Overspeeding (${currentSpeedKmh.toFixed(0)} km/h)`);
+          }
+        }
+
         if (mapRef.current) {
           mapRef.current.animateCamera({
             center: {
@@ -322,6 +381,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
     switch (type) {
       case 'Critical': return { bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' };
       case 'Moderate': return { bg: '#ffedd5', text: '#ea580c', border: '#fdba74' };
+      case 'Speeding': return { bg: '#fef3c7', text: '#d97706', border: '#fde68a' }; // Amber
       default: return { bg: '#f3f4f6', text: '#4b5563', border: '#d1d5db' };
     }
   };
@@ -332,8 +392,8 @@ export default function DriverMonitorScreen({ navigation, route }) {
       <View style={styles.header}>
         <Text style={styles.title}>Smart Drive</Text>
         <View>
-          <Text style={styles.boldText}>Vehicle : {vehicleName || user?.vehicleType || user?.vehicles?.[0]?.type || "Car"}</Text>
-          <Text style={styles.grayText}>Number : {vehicleNumber || user?.vehicleNumber || user?.vehicles?.[0]?.number || "GJ-00-0000"}</Text>
+          <Text style={styles.boldText}>Vehicle : {vehicleName || user?.vehicleType || "Car"}</Text>
+          <Text style={styles.grayText}>Number : {vehicleNumber || "Not Set"}</Text>
         </View>
       </View>
 
@@ -460,17 +520,41 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
       {/* STOP BUTTON */}
       <TouchableOpacity 
-         onPress={() => {
+         onPress={async () => {
              const driveTimeMs = Date.now() - startTime;
+             const tripDistanceKm = tripDistance / 1000;
+             const isCancelled = driveTimeMs < 60000 && tripDistanceKm < 0.1;
+             
              const tripData = {
+                 end_time: new Date().toISOString(),
+                 status: isCancelled ? 'CANCELLED' : 'COMPLETED',
+                 distance_km: tripDistanceKm
+             };
+             
+             if (tripId) {
+                 await updateTripStatus(tripId, tripData);
+             }
+
+             if (isCancelled) {
+                 Alert.alert("Trip Cancelled", "The trip was very short and has been cancelled.");
+                 navigation.replace("Home");
+                 return;
+             }
+
+             const feedbackData = {
                  date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
                  route: `${start || "Unknown"} → ${end || "Unknown"}`,
-                 vehicle: `${vehicleName || user?.vehicleType || user?.vehicles?.[0]?.type || "Car"} (${vehicleNumber || user?.vehicleNumber || user?.vehicles?.[0]?.number || "Unknown"})`,
+                 vehicle: `${vehicleName || user?.vehicleType || "Car"} (${vehicleNumber || "Unknown"})`,
                  alertsCount: alerts.length,
                  driveTime: driveTimeMs,
                  distance: tripDistance
              };
-             navigation.replace("TripFeedback", { tripData });
+             navigation.replace("TripFeedback", { 
+                 tripData: feedbackData, 
+                 tripId: tripId,
+                 routeCoords: routeCoordinates,
+                 alertsDetails: allTripAlerts
+             });
          }} 
          style={styles.stopButton}
       >
