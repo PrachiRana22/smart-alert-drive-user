@@ -31,7 +31,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('front');
-  
+
   const [location, setLocation] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [allTripAlerts, setAllTripAlerts] = useState([]); // Persistent full trip log for Maps
@@ -43,10 +43,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
     testStateRef.current = testState;
   }, [testState]);
 
-  const [eyesClosedFrames, setEyesClosedFrames] = useState(0); 
+  const [eyesClosedFrames, setEyesClosedFrames] = useState(0);
   const [faceStatusText, setFaceStatusText] = useState("Status: Monitoring");
   const [activePersona, setActivePersona] = useState("Normal"); // Dynamic persona state
-  
+
   // Blink tracking
   const [blinkTimestamps, setBlinkTimestamps] = useState([]);
   const [wasEyesClosedLastFrame, setWasEyesClosedLastFrame] = useState(false);
@@ -55,6 +55,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
   const mapRef = useRef(null);
   const cameraRef = useRef(null);
   const isProcessingRef = useRef(false);
+  const locationSubscriptionRef = useRef(null);
 
   const [routeCoordinates, setRouteCoordinates] = useState(routeCoords || []);
   const [endCoords, setEndCoords] = useState(destinationCoords || null);
@@ -62,9 +63,17 @@ export default function DriverMonitorScreen({ navigation, route }) {
   // Distance and Time Tracking
   const [startTime] = useState(Date.now());
   const [tripDistance, setTripDistance] = useState(0); // in meters
-  const currentSpeedRef = useRef(0); // in km/h
+  const liveTripSpeedRef = useRef(0); // For live tracking to avoid naming clashes
   const lastSpeedAlertTimeRef = useRef(0);
-  const SPEED_LIMIT = 80; // km/h limit
+  const SPEED_LIMIT = 80; // km/h limit (default)
+
+  // AI Safety Coach States & Refs
+  const lastAIAlertTimeRef = useRef(0);
+  const incidentHistoryRef = useRef([]); // Timestamps of alerts for spike detection
+  const durationAlertedCountRef = useRef(0);
+  const [aiCoachStatus, setAiCoachStatus] = useState("Optimal");
+  const [weatherCondition, setWeatherCondition] = useState(null);
+  const weatherAlertCooldownRef = useRef(0);
 
   useEffect(() => {
     startLiveLocation();
@@ -84,10 +93,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
     // Transform formatting to match the old expected format
     if (!isSim && faces && faces.length > 0) {
       const mapped = {
-         faces: faces.map(f => ({
-           leftEyeOpenProbability: f.leftEyeOpenProbability,
-           rightEyeOpenProbability: f.rightEyeOpenProbability
-         }))
+        faces: faces.map(f => ({
+          leftEyeOpenProbability: f.leftEyeOpenProbability,
+          rightEyeOpenProbability: f.rightEyeOpenProbability
+        }))
       };
       handleFacesDetected(mapped);
     }
@@ -96,20 +105,20 @@ export default function DriverMonitorScreen({ navigation, route }) {
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
     if (!isSimulating) {
-       runAsync(frame, () => {
-         'worklet';
-         const faces = detectFaces(frame);
-         if (faces.length > 0) {
-            handleFacesDetectedJS(faces, isSimulating);
-         }
-       });
+      runAsync(frame, () => {
+        'worklet';
+        const faces = detectFaces(frame);
+        if (faces.length > 0) {
+          handleFacesDetectedJS(faces, isSimulating);
+        }
+      });
     }
   }, [isSimulating, handleFacesDetectedJS]);
 
   // Simulation mode check loops (only active if simulating)
   useEffect(() => {
     if (!isSimulating) return;
-    
+
     let isActive = true;
     const processFrame = () => {
       if (!isActive) return;
@@ -117,7 +126,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
       if (testStateRef.current === "Normal") {
         emulateEyesClosed = false;
       } else if (testStateRef.current === "Drowsy") {
-        emulateEyesClosed = (Date.now() % 400) > 200; 
+        emulateEyesClosed = (Date.now() % 400) > 200;
       } else if (testStateRef.current === "Sleep") {
         emulateEyesClosed = true;
       }
@@ -141,7 +150,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
         setFaceStatusText("Eyes Open - Safe");
         // Revert active persona gradually to normal when eyes are open and safe
         if (activePersona !== "Normal") {
-           setActivePersona("Normal");
+          setActivePersona("Normal");
         }
       }
     } else if (eyesClosedFrames >= sleepFrames) { // dynamic threshold based on persona
@@ -157,69 +166,64 @@ export default function DriverMonitorScreen({ navigation, route }) {
   // Cleanup Sound
   useEffect(() => {
     return () => {
-      Speech.stop();
-      if (sound) sound.unloadAsync();
+      stopBeep();
+      if (locationSubscriptionRef.current) {
+        locationSubscriptionRef.current.remove();
+      }
     };
-  }, [sound]);
+  }, []);
 
-  const playBeep = async (type) => {
+  const playBeep = async (type, customMessage = null) => {
     try {
-      // Conversational Assistant Synthesis (Runs alongside Audio Beep)
+      // Conversational Assistant Synthesis
       const userName = user?.first_name || "Driver";
-      let speechPhrase = "";
-      
-      if (type === 'Critical') {
-        speechPhrase = `Critical Alert, ${userName}! Wake up immediately!`;
-        Speech.speak(speechPhrase, { rate: 1.1, pitch: 1.2 });
-      } else if (type === 'Speeding') {
-        speechPhrase = `Warning ${userName}, you are over the speed limit. Please slow down!`;
-        Speech.speak(speechPhrase, { rate: 1.0, pitch: 1.0 });
-      } else if (type === 'Moderate') {
-        speechPhrase = `Warning ${userName}, your eyes seem tired. Please focus on the road.`;
-        Speech.speak(speechPhrase, { rate: 1.0, pitch: 1.0 });
+      let speechPhrase = customMessage;
+
+      if (!speechPhrase) {
+        if (type === 'Critical') {
+          speechPhrase = `Critical Alert, ${userName}! Wake up immediately!`;
+        } else if (type === 'Speeding') {
+          speechPhrase = `Warning ${userName}, you are over the speed limit. Please slow down!`;
+        } else if (type === 'Moderate') {
+          speechPhrase = `Warning ${userName}, your eyes seem tired. Please focus on the road.`;
+        } else if (type === 'AI_COACH') {
+          speechPhrase = `Attention ${userName}. Safety assessment in progress.`;
+        }
       }
 
-      if (sound) {
-        await sound.unloadAsync();
+      // Speak with slightly different tones based on severity
+      if (speechPhrase) {
+        if (type === 'Critical') {
+          Speech.speak(speechPhrase, { rate: 1.1, pitch: 1.2 });
+          Vibration.vibrate([0, 500, 200, 500], true);
+        } else if (type === 'AI_COACH') {
+          Speech.speak(speechPhrase, { rate: 0.9, pitch: 1.0 }); // Calmer for AI Coach
+          Vibration.vibrate(200);
+        } else {
+          Speech.speak(speechPhrase, { rate: 1.0, pitch: 1.0 });
+          Vibration.vibrate(500);
+        }
       }
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        require('../../assets/alarm.mp3')
-      );
-      setSound(newSound);
-
-      if (type === 'Critical') {
-        Vibration.vibrate([0, 500, 200, 500], true);
-        await newSound.setIsLoopingAsync(true);
-      } else {
-        Vibration.vibrate(500);
-      }
-      
-      await newSound.playAsync();
     } catch (error) {
-       console.log("Could not play sound", error);
+      console.log("Speech Error:", error);
     }
   };
 
   const stopBeep = async () => {
     Vibration.cancel();
     Speech.stop();
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-      setSound(null);
-    }
   };
 
   const fetchRouteData = async () => {
     try {
       const startResult = await Location.geocodeAsync(start);
       const endResult = await Location.geocodeAsync(end);
-      
+
       if (startResult.length > 0 && endResult.length > 0) {
         setEndCoords({ latitude: endResult[0].latitude, longitude: endResult[0].longitude });
-        
+
         const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startResult[0].longitude},${startResult[0].latitude};${endResult[0].longitude},${endResult[0].latitude}?overview=full&geometries=polyline`;
-        
+
         const response = await fetch(osrmUrl);
         const data = await response.json();
 
@@ -231,14 +235,35 @@ export default function DriverMonitorScreen({ navigation, route }) {
         }
       }
     } catch (error) {
-       console.log("Route fetch error:", error);
+      console.log("Route fetch error:", error);
+    }
+  };
+
+  const fetchRealWeather = async (lat, lon) => {
+    try {
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const data = await response.json();
+      if (data && data.current_weather) {
+        const code = data.current_weather.weathercode;
+        // WMO Codes: 51-67 (Rain), 71-77 (Snow), 80-86 (Showers), 95-99 (Thunderstorm)
+        if (code >= 51 && code <= 99) {
+          return "Hazardous (Rain/Snow/Storm)";
+        }
+      }
+      return "Clear";
+    } catch (error) {
+      console.log("Weather error:", error);
+      return "Unknown";
     }
   };
 
   const addAlert = (type, message, specificAlertType = null) => {
+    // Track incident for AI Frequency analysis
+    incidentHistoryRef.current.push(Date.now());
+
     // Speeding is styled as 'Speeding', but should just reflect 'Moderate' visually on the primary Persona layout
-    setActivePersona(type === 'Speeding' ? 'Moderate' : type); 
-    
+    setActivePersona(type === 'Speeding' ? 'Moderate' : type);
+
     const newAlert = {
       id: Date.now().toString(),
       type, // 'Normal', 'Moderate', 'Critical', 'Speeding'
@@ -260,7 +285,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
           latitude: location?.latitude,
           longitude: location?.longitude,
           location: `Lat: ${location?.latitude}, Lon: ${location?.longitude}`,
-          vehicle_speed: currentSpeedRef.current
+          vehicle_speed: liveTripSpeedRef.current
         });
         if (res) backendId = res.id;
       }
@@ -269,11 +294,13 @@ export default function DriverMonitorScreen({ navigation, route }) {
         Alert.alert(
           "CRITICAL ALERT",
           message,
-          [{ text: "I'm Awake", onPress: () => {
-            setEyesClosedFrames(0);
-            stopBeep();
-            if (backendId) resolveAlert(backendId);
-          }}]
+          [{
+            text: "I'm Awake", onPress: () => {
+              setEyesClosedFrames(0);
+              stopBeep();
+              if (backendId) resolveAlert(backendId);
+            }
+          }]
         );
       }
     };
@@ -300,11 +327,11 @@ export default function DriverMonitorScreen({ navigation, route }) {
       } else {
         // Eyes are Open
         setEyesClosedFrames(0);
-        
+
         // Did they just open after being closed? That's a BLINK.
         if (wasEyesClosedLastFrame) {
           const now = Date.now();
-          
+
           setBlinkTimestamps(prev => {
             // Keep only blinks from the last 7 seconds to calculate rapid blink rate safely
             const recentBlinks = [...prev, now].filter(t => now - t < 7000);
@@ -316,10 +343,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
               playBeep('Moderate');
               return []; // Reset after alerting to avoid spam
             } else if (blinkCount === 1) {
-               // Do not add normal alert to avoid UI clutter
-               setFaceStatusText("Status: Normal");
+              // Do not add normal alert to avoid UI clutter
+              setFaceStatusText("Status: Normal");
             }
-            
+
             return recentBlinks;
           });
         }
@@ -337,16 +364,51 @@ export default function DriverMonitorScreen({ navigation, route }) {
       (loc) => {
         setLocation(loc.coords);
         const currentSpeedKmh = Math.max(0, (loc.coords.speed || 0) * 3.6);
-        currentSpeedRef.current = currentSpeedKmh; // Convert m/s to km/h
-        
+        liveTripSpeedRef.current = currentSpeedKmh; // Convert m/s to km/h
+
         // Speeding Check
+        const now = Date.now();
         if (currentSpeedKmh > SPEED_LIMIT) {
-          const now = Date.now();
           if (now - lastSpeedAlertTimeRef.current > 30000) { // 30 sec cooldown
             lastSpeedAlertTimeRef.current = now;
             addAlert('Speeding', `Warning: You are overspeeding at ${currentSpeedKmh.toFixed(0)} km/h. Please slow down!`, 'Speeding');
             playBeep('Moderate'); // Double beep for overspeeding
             setFaceStatusText(`Overspeeding (${currentSpeedKmh.toFixed(0)} km/h)`);
+          }
+        }
+
+        // AI Safety Coach Loop (Check every 60s approx)
+        if (now - lastAIAlertTimeRef.current > 60000) {
+          lastAIAlertTimeRef.current = now;
+
+          // 1. Duration Check (every 30 mins)
+          const driveMins = Math.floor((now - startTime) / 60000);
+          const alertSlot = Math.floor(driveMins / 30);
+          if (alertSlot > durationAlertedCountRef.current) {
+            durationAlertedCountRef.current = alertSlot;
+            playBeep('AI_COACH', `Ronit, you have been driving for ${driveMins} minutes. Consider taking a short break to stay sharp.`);
+            setAiCoachStatus("Suggesting Break");
+          }
+
+          // 2. Frequency Spike Check (>2 alerts in 5 mins)
+          const fiveMinsAgo = now - 300000;
+          incidentHistoryRef.current = incidentHistoryRef.current.filter(t => t > fiveMinsAgo);
+          if (incidentHistoryRef.current.length >= 3) {
+            playBeep('AI_COACH', `Warning Ronit. High frequency of drowsiness triggers detected. Your fatigue levels are rising. Please pull over safely.`);
+            setAiCoachStatus("High Fatigue Risk");
+            incidentHistoryRef.current = []; // Reset after coach warning
+          }
+
+          // 3. Weather Risk Evaluation
+          if (now - weatherAlertCooldownRef.current > 600000) { // Every 10 mins
+            fetchRealWeather(loc.coords.latitude, loc.coords.longitude).then(cond => {
+              setWeatherCondition(cond);
+              if (cond.includes("Hazardous") || weatherCondition === "MOCKED_RAIN") {
+                playBeep('AI_COACH', `Adverse weather detected in your route. Please reduce your typical cruising speed and maintain a safe following distance.`);
+                setAiCoachStatus("Weather Hazard");
+                weatherAlertCooldownRef.current = now;
+              }
+            });
           }
         }
 
@@ -407,9 +469,9 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
         <View style={styles.cameraWrapper}>
           {device != null ? (
-            <Camera 
+            <Camera
               ref={cameraRef}
-              style={{ flex: 1 }} 
+              style={{ flex: 1 }}
               device={device}
               isActive={true}
               frameProcessor={frameProcessor}
@@ -419,12 +481,24 @@ export default function DriverMonitorScreen({ navigation, route }) {
           )}
         </View>
       </View>
-      
+
       <View style={{ marginBottom: 10, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text style={{ fontWeight: 'bold', color: isSimulating ? '#16a34a' : 'gray', fontSize: 12 }}>
           {faceStatusText}
         </Text>
-        <Text style={{ fontSize: 12, color: 'gray', fontStyle: 'italic'}}>Current State: {testState}</Text>
+        <Text style={{ fontSize: 12, color: 'gray', fontStyle: 'italic' }}>Current State: {testState}</Text>
+      </View>
+
+      {/* AI SAFETY COACH HUD */}
+      <View style={[styles.aiCoachCard, { borderColor: aiCoachStatus === 'Optimal' ? '#10b981' : '#f59e0b' }]}>
+         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={[styles.statusDot, { backgroundColor: aiCoachStatus === 'Optimal' ? '#10b981' : '#f59e0b' }]} />
+            <Text style={styles.aiCoachLabel}>AI SAFETY COACH : </Text>
+            <Text style={[styles.aiCoachStatusText, { color: aiCoachStatus === 'Optimal' ? '#059669' : '#d97706' }]}>{aiCoachStatus.toUpperCase()}</Text>
+         </View>
+         {weatherCondition && (
+           <Text style={styles.weatherText}>📍 Weather: {weatherCondition}</Text>
+         )}
       </View>
 
       {/* PERSONA DISPLAY */}
@@ -437,24 +511,33 @@ export default function DriverMonitorScreen({ navigation, route }) {
       {/* MANUAL TEST CONTROLS (Hidden when testing real face detection) */}
       {isSimulating && (
         <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
-            <TouchableOpacity 
-              onPress={() => setTestState("Normal")}
-               style={[styles.testButton, testState === "Normal" && styles.testButtonActive]}
-            >
-              <Text style={[styles.testButtonText, testState === "Normal" && styles.testButtonTextActive]}>Normal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => setTestState("Drowsy")}
-              style={[styles.testButton, testState === "Drowsy" && styles.testButtonActive]}
-            >
-              <Text style={[styles.testButtonText, testState === "Drowsy" && styles.testButtonTextActive]}>Drowsy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-               onPress={() => setTestState("Sleep")}
-               style={[styles.testButton, testState === "Sleep" && styles.testButtonActive]}
-            >
-              <Text style={[styles.testButtonText, testState === "Sleep" && styles.testButtonTextActive]}>Asleep</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setTestState("Normal")}
+            style={[styles.testButton, testState === "Normal" && styles.testButtonActive]}
+          >
+            <Text style={[styles.testButtonText, testState === "Normal" && styles.testButtonTextActive]}>Normal</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setTestState("Drowsy")}
+            style={[styles.testButton, testState === "Drowsy" && styles.testButtonActive]}
+          >
+            <Text style={[styles.testButtonText, testState === "Drowsy" && styles.testButtonTextActive]}>Drowsy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setTestState("Sleep")}
+            style={[styles.testButton, testState === "Sleep" && styles.testButtonActive]}
+          >
+            <Text style={[styles.testButtonText, testState === "Sleep" && styles.testButtonTextActive]}>Asleep</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
+              setWeatherCondition("MOCKED_RAIN");
+              playBeep('AI_COACH', `Simulating Rain Hazard. AI Safety Coach evaluating route conditions.`);
+            }}
+            style={[styles.testButton, weatherCondition === "MOCKED_RAIN" && styles.testButtonActive]}
+          >
+            <Text style={[styles.testButtonText, weatherCondition === "MOCKED_RAIN" && styles.testButtonTextActive]}>Simulate Rain</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -519,44 +602,48 @@ export default function DriverMonitorScreen({ navigation, route }) {
       </View>
 
       {/* STOP BUTTON */}
-      <TouchableOpacity 
-         onPress={async () => {
-             const driveTimeMs = Date.now() - startTime;
-             const tripDistanceKm = tripDistance / 1000;
-             const isCancelled = driveTimeMs < 60000 && tripDistanceKm < 0.1;
-             
-             const tripData = {
-                 end_time: new Date().toISOString(),
-                 status: isCancelled ? 'CANCELLED' : 'COMPLETED',
-                 distance_km: tripDistanceKm
-             };
-             
-             if (tripId) {
-                 await updateTripStatus(tripId, tripData);
-             }
+      <TouchableOpacity
+        onPress={async () => {
+          stopBeep();
+          if (locationSubscriptionRef.current) {
+            locationSubscriptionRef.current.remove();
+          }
+          const driveTimeMs = Date.now() - startTime;
+          const tripDistanceKm = tripDistance / 1000;
+          const isCancelled = driveTimeMs < 60000 && tripDistanceKm < 0.1;
 
-             if (isCancelled) {
-                 Alert.alert("Trip Cancelled", "The trip was very short and has been cancelled.");
-                 navigation.replace("Home");
-                 return;
-             }
+          const tripData = {
+            end_time: new Date().toISOString(),
+            status: isCancelled ? 'CANCELLED' : 'COMPLETED',
+            distance_km: tripDistanceKm
+          };
 
-             const feedbackData = {
-                 date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-                 route: `${start || "Unknown"} → ${end || "Unknown"}`,
-                 vehicle: `${vehicleName || user?.vehicleType || "Car"} (${vehicleNumber || "Unknown"})`,
-                 alertsCount: alerts.length,
-                 driveTime: driveTimeMs,
-                 distance: tripDistance
-             };
-             navigation.replace("TripFeedback", { 
-                 tripData: feedbackData, 
-                 tripId: tripId,
-                 routeCoords: routeCoordinates,
-                 alertsDetails: allTripAlerts
-             });
-         }} 
-         style={styles.stopButton}
+          if (tripId) {
+            await updateTripStatus(tripId, tripData);
+          }
+
+          if (isCancelled) {
+            Alert.alert("Trip Cancelled", "The trip was very short and has been cancelled.");
+            navigation.replace("Home");
+            return;
+          }
+
+          const feedbackData = {
+            date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+            route: `${start || "Unknown"} → ${end || "Unknown"}`,
+            vehicle: `${vehicleName || user?.vehicleType || "Car"} (${vehicleNumber || "Unknown"})`,
+            alertsCount: alerts.length,
+            driveTime: driveTimeMs,
+            distance: tripDistance
+          };
+          navigation.replace("TripFeedback", {
+            tripData: feedbackData,
+            tripId: tripId,
+            routeCoords: routeCoordinates,
+            alertsDetails: allTripAlerts
+          });
+        }}
+        style={styles.stopButton}
       >
         <Text style={styles.stopButtonText}>Stop Trip</Text>
       </TouchableOpacity>
@@ -594,5 +681,22 @@ const styles = StyleSheet.create({
   testButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#e5e7eb', borderWidth: 1, borderColor: '#d1d5db' },
   testButtonActive: { backgroundColor: '#2563eb', borderColor: '#1d4ed8' },
   testButtonText: { fontSize: 12, color: '#4b5563', fontWeight: 'bold' },
-  testButtonTextActive: { color: 'white' }
+  testButtonTextActive: { color: 'white' },
+  aiCoachCard: { 
+    backgroundColor: 'white', 
+    marginHorizontal: 16, 
+    marginBottom: 12, 
+    padding: 12, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
+  aiCoachLabel: { fontSize: 11, fontWeight: '900', color: '#64748b', letterSpacing: 0.5 },
+  aiCoachStatusText: { fontSize: 13, fontWeight: 'bold' },
+  weatherText: { fontSize: 11, color: '#64748b', marginTop: 4, fontStyle: 'italic' }
 });
