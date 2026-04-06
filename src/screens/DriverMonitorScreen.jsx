@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Vibration } from "react-native";
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Vibration, AppState } from "react-native";
 import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, runAsync } from 'react-native-vision-camera';
 import { useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { Worklets } from 'react-native-worklets-core';
@@ -8,7 +8,7 @@ import polyline from '@mapbox/polyline';
 import * as Location from "expo-location";
 import { Audio } from "expo-av";
 import * as Speech from "expo-speech";
-import { AlertTriangle, ShieldCheck, Square } from "lucide-react-native";
+import { AlertTriangle, ShieldCheck, Square, Smartphone, Clock, Activity } from "lucide-react-native";
 import { AuthContext } from "../context/AuthContext";
 
 export default function DriverMonitorScreen({ navigation, route }) {
@@ -70,10 +70,40 @@ export default function DriverMonitorScreen({ navigation, route }) {
   // AI Safety Coach States & Refs
   const lastAIAlertTimeRef = useRef(0);
   const incidentHistoryRef = useRef([]); // Timestamps of alerts for spike detection
+  const drowsinessEventsWindowRef = useRef([]); // Timestamps of specifically drowsiness
   const durationAlertedCountRef = useRef(0);
   const [aiCoachStatus, setAiCoachStatus] = useState("Optimal");
   const [weatherCondition, setWeatherCondition] = useState(null);
   const weatherAlertCooldownRef = useRef(0);
+
+  // Live Telemetry
+  const [currentSpeed, setCurrentSpeed] = useState(0);
+  const [drivingTimeStr, setDrivingTimeStr] = useState("00:00:00");
+  const [phoneUsageCount, setPhoneUsageCount] = useState(0);
+  const appState = useRef(AppState.currentState);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      const hrs = Math.floor(s / 3600).toString().padStart(2, '0');
+      const mins = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+      const secs = (s % 60).toString().padStart(2, '0');
+      setDrivingTimeStr(`${hrs}:${mins}:${secs}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [startTime]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        setPhoneUsageCount(prev => prev + 1);
+        addAlert('Moderate', '⚠️ Phone usage detected. Please focus on the road.', 'Phone Usage');
+        playBeep('Moderate', 'Phone usage detected. Please focus on the road.');
+      }
+      appState.current = nextAppState;
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     startLiveLocation();
@@ -154,7 +184,11 @@ export default function DriverMonitorScreen({ navigation, route }) {
         }
       }
     } else if (eyesClosedFrames >= sleepFrames) { // dynamic threshold based on persona
-      addAlert('Critical', 'CRITICAL: Driver asleep! Wake up immediately!');
+      const now = Date.now();
+      drowsinessEventsWindowRef.current = [...drowsinessEventsWindowRef.current, now].filter(t => now - t < 60000);
+      const times = drowsinessEventsWindowRef.current.length;
+      
+      addAlert('Critical', `⚠️ Drowsiness detected ${times} time${times > 1 ? 's' : ''} in the last minute. (Asleep)`);
       setFaceStatusText("CRITICAL - ASLEEP!");
       setActivePersona("Critical");
       playBeep('Critical');
@@ -338,7 +372,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
             const blinkCount = recentBlinks.length;
 
             if (blinkCount >= blinkLimit) { // dynamic blink threshold based on persona
-              addAlert('Moderate', 'Warning: Continuous rapid blinking (Drowsy)!');
+              drowsinessEventsWindowRef.current = [...drowsinessEventsWindowRef.current, now].filter(t => now - t < 60000);
+              const times = drowsinessEventsWindowRef.current.length;
+
+              addAlert('Moderate', `⚠️ Drowsiness detected ${times} time${times > 1 ? 's' : ''} in the last minute.`);
               setFaceStatusText("Warning - Frequent Blinks");
               playBeep('Moderate');
               return []; // Reset after alerting to avoid spam
@@ -364,6 +401,9 @@ export default function DriverMonitorScreen({ navigation, route }) {
       (loc) => {
         setLocation(loc.coords);
         const currentSpeedKmh = Math.max(0, (loc.coords.speed || 0) * 3.6);
+        // Lowered threshold: Only ignore tiny micro-drifts under 0.5 km/h, allow walking speed
+        const displaySpeed = currentSpeedKmh < 0.5 ? 0 : currentSpeedKmh;
+        setCurrentSpeed(displaySpeed);
         liveTripSpeedRef.current = currentSpeedKmh; // Convert m/s to km/h
 
         // Speeding Check
@@ -381,12 +421,12 @@ export default function DriverMonitorScreen({ navigation, route }) {
         if (now - lastAIAlertTimeRef.current > 60000) {
           lastAIAlertTimeRef.current = now;
 
-          // 1. Duration Check (every 30 mins)
+          // 1. Duration Check (every 2 hours)
           const driveMins = Math.floor((now - startTime) / 60000);
-          const alertSlot = Math.floor(driveMins / 30);
+          const alertSlot = Math.floor(driveMins / 120);
           if (alertSlot > durationAlertedCountRef.current) {
             durationAlertedCountRef.current = alertSlot;
-            playBeep('AI_COACH', `Ronit, you have been driving for ${driveMins} minutes. Consider taking a short break to stay sharp.`);
+            playBeep('AI_COACH', `⚠️ You have been driving for ${alertSlot * 2} hours. Consider taking a break.`);
             setAiCoachStatus("Suggesting Break");
           }
 
@@ -404,7 +444,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
             fetchRealWeather(loc.coords.latitude, loc.coords.longitude).then(cond => {
               setWeatherCondition(cond);
               if (cond.includes("Hazardous") || weatherCondition === "MOCKED_RAIN") {
-                playBeep('AI_COACH', `Adverse weather detected in your route. Please reduce your typical cruising speed and maintain a safe following distance.`);
+                playBeep('AI_COACH', `⚠️ Rain detected in your route. Reduce speed.`);
                 setAiCoachStatus("Weather Hazard");
                 weatherAlertCooldownRef.current = now;
               }
@@ -513,6 +553,25 @@ export default function DriverMonitorScreen({ navigation, route }) {
         </View>
       </View>
 
+      {/* LIVE TELEMETRY */}
+      <View className="mx-4 mb-4 flex-row gap-3">
+        <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
+            <Activity size={18} color="#38BDF8" className="mb-2" />
+            <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Speed</Text>
+            <Text className="text-xl font-black text-white tracking-widest">{currentSpeed.toFixed(0)}<Text className="text-[10px] text-slate-400 font-bold ml-1">km/h</Text></Text>
+        </View>
+        <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
+            <Clock size={18} color="#10B981" className="mb-2" />
+            <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Time</Text>
+            <Text className="text-sm font-black text-white tracking-widest mt-1">{drivingTimeStr}</Text>
+        </View>
+        <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
+            <Smartphone size={18} color="#f97316" className="mb-2" />
+            <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Phone</Text>
+            <Text className="text-xl font-black text-white tracking-widest">{phoneUsageCount}</Text>
+        </View>
+      </View>
+
       {/* AI SAFETY COACH HUD */}
       <View className={`mx-4 mb-4 p-4 rounded-[24px] border shadow-lg ${aiCoachStatus === 'Optimal' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-amber-900/20 border-amber-500/30'}`}>
          <View className="flex-row items-center">
@@ -551,8 +610,18 @@ export default function DriverMonitorScreen({ navigation, route }) {
           ))}
           <TouchableOpacity
             onPress={() => {
+              setPhoneUsageCount(prev => prev + 1);
+              addAlert('Moderate', '⚠️ Phone usage detected. Please focus on the road.', 'Phone Usage');
+              playBeep('Moderate', 'Phone usage detected. Please focus on the road.');
+            }}
+            className="flex-1 py-3 rounded-2xl items-center border bg-slate-800/40 border-slate-700/50"
+          >
+            <Text className="text-[10px] font-black tracking-wider uppercase text-slate-400">Phone</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => {
               setWeatherCondition("MOCKED_RAIN");
-              playBeep('AI_COACH', `Simulating Rain Hazard. AI Safety Coach evaluating route conditions.`);
+              playBeep('AI_COACH', `⚠️ Rain detected in your route. Reduce speed.`);
             }}
             className={`flex-1 py-3 rounded-2xl items-center border ${weatherCondition === "MOCKED_RAIN" ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800/40 border-slate-700/50'}`}
           >
