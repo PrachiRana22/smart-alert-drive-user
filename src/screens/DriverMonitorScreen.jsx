@@ -430,44 +430,67 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   if (!hasPermission) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.permissionText}>Camera permission required for safety monitoring</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
-        </TouchableOpacity>
+      <View className="flex-1 bg-[#0B1120] justify-center items-center px-6">
+        <View className="bg-slate-800/40 p-8 rounded-[32px] border border-slate-700/50 items-center w-full shadow-2xl shadow-black">
+            <View className="w-16 h-16 rounded-full bg-blue-500/20 items-center justify-center mb-6 border border-blue-500/30">
+                <ShieldCheck size={32} color="#38BDF8" />
+            </View>
+            <Text className="text-xl font-black text-white tracking-wider mb-2 uppercase text-center">Camera Access</Text>
+            <Text className="text-slate-400 text-center mb-8 font-medium leading-5">The AI Safety Coach requires camera permission to monitor driver fatigue and distraction levels continuously.</Text>
+            
+            <TouchableOpacity 
+                className="bg-blue-600 w-full py-4 rounded-2xl items-center shadow-lg shadow-blue-600/30 active:scale-95 transition-transform" 
+                onPress={requestPermission}
+            >
+                <Text className="text-white font-black tracking-widest uppercase text-sm">Grant Permission</Text>
+            </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   const getAlertStyle = (type) => {
     switch (type) {
-      case 'Critical': return { bg: '#fee2e2', text: '#dc2626', border: '#fca5a5' };
-      case 'Moderate': return { bg: '#ffedd5', text: '#ea580c', border: '#fdba74' };
-      case 'Speeding': return { bg: '#fef3c7', text: '#d97706', border: '#fde68a' }; // Amber
-      default: return { bg: '#f3f4f6', text: '#4b5563', border: '#d1d5db' };
+      case 'Critical': return { bg: 'rgba(220, 38, 38, 0.1)', text: '#ef4444', border: 'rgba(239, 68, 68, 0.3)' };
+      case 'Moderate': return { bg: 'rgba(234, 88, 12, 0.1)', text: '#f97316', border: 'rgba(249, 115, 22, 0.3)' };
+      case 'Speeding': return { bg: 'rgba(217, 119, 6, 0.1)', text: '#f59e0b', border: 'rgba(245, 158, 11, 0.3)' }; // Amber
+      default: return { bg: 'rgba(71, 85, 105, 0.2)', text: '#94a3b8', border: 'rgba(71, 85, 105, 0.3)' };
     }
   };
 
   return (
-    <View style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Smart Drive</Text>
+    <View className="flex-1 bg-[#0B1120] pt-14 px-2">
+      {/* HEADER HUD */}
+      <View className="flex-row justify-between items-center px-4 mb-5">
         <View>
-          <Text style={styles.boldText}>Vehicle : {vehicleName || user?.vehicleType || "Car"}</Text>
-          <Text style={styles.grayText}>Number : {vehicleNumber || "Not Set"}</Text>
+            <Text className="text-2xl font-black tracking-widest text-[#38BDF8] uppercase mb-1">Smart Drive</Text>
+            <View className="flex-row items-center border border-emerald-500/30 bg-emerald-900/20 px-2 py-1 rounded-full self-start">
+                <View className="w-1.5 h-1.5 rounded-full bg-[#10B981] mr-1.5 shadow-sm shadow-[#10b981]" />
+                <Text className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">Active Rider</Text>
+            </View>
+        </View>
+        <View className="bg-slate-800/60 px-4 py-2 rounded-2xl border border-slate-700/50 items-center">
+          <Text className="text-[9px] font-bold text-slate-400 tracking-widest uppercase mb-0.5">Vehicle</Text>
+          <Text className="font-bold text-slate-100 text-xs">{vehicleNumber || "NOT SET"}</Text>
         </View>
       </View>
 
       {/* TRIP INFO + CAMERA */}
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.infoText}>Start : {start || "Unknown"}</Text>
-          <Text style={styles.infoText}>Destination : {end || "Unknown"}</Text>
-          <Text>Status : <Text style={styles.drivingStatus}>Driving</Text></Text>
+      <View className="flex-row px-4 mb-4 gap-4">
+        {/* Info Panel */}
+        <View className="flex-1 bg-slate-800/40 rounded-[28px] p-5 border border-slate-700/50 justify-center">
+            <View className="mb-4">
+                <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase mb-1">Origin</Text>
+                <Text className="text-slate-200 text-sm font-medium" numberOfLines={1}>{start || "Unknown"}</Text>
+            </View>
+            <View>
+                <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase mb-1">Destination</Text>
+                <Text className="text-slate-200 text-sm font-medium" numberOfLines={1}>{end || "Unknown"}</Text>
+            </View>
         </View>
 
-        <View style={styles.cameraWrapper}>
+        {/* Camera PIP */}
+        <View className="w-28 h-40 bg-black rounded-[28px] overflow-hidden border border-slate-600 relative shadow-lg shadow-black/80">
           {device != null ? (
             <Camera
               ref={cameraRef}
@@ -477,72 +500,69 @@ export default function DriverMonitorScreen({ navigation, route }) {
               frameProcessor={frameProcessor}
             />
           ) : (
-            <View style={styles.center}><Text style={{ color: 'white' }}>No Camera</Text></View>
+            <View className="flex-1 justify-center items-center"><Text className="text-slate-500 text-xs text-center px-2">No Cam</Text></View>
           )}
+          {/* Status Overlay on Cam */}
+          <View className="absolute bottom-3 w-full items-center px-1">
+              <View className="bg-black/70 px-2 py-1 rounded-full border border-white/20">
+                  <Text className={`text-[9px] font-black tracking-wider uppercase ${isSimulating ? 'text-emerald-400' : 'text-slate-300'}`} numberOfLines={1}>
+                    {faceStatusText.replace("Status: ", "")}
+                  </Text>
+              </View>
+          </View>
         </View>
       </View>
 
-      <View style={{ marginBottom: 10, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={{ fontWeight: 'bold', color: isSimulating ? '#16a34a' : 'gray', fontSize: 12 }}>
-          {faceStatusText}
-        </Text>
-        <Text style={{ fontSize: 12, color: 'gray', fontStyle: 'italic' }}>Current State: {testState}</Text>
-      </View>
-
       {/* AI SAFETY COACH HUD */}
-      <View style={[styles.aiCoachCard, { borderColor: aiCoachStatus === 'Optimal' ? '#10b981' : '#f59e0b' }]}>
-         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={[styles.statusDot, { backgroundColor: aiCoachStatus === 'Optimal' ? '#10b981' : '#f59e0b' }]} />
-            <Text style={styles.aiCoachLabel}>AI SAFETY COACH : </Text>
-            <Text style={[styles.aiCoachStatusText, { color: aiCoachStatus === 'Optimal' ? '#059669' : '#d97706' }]}>{aiCoachStatus.toUpperCase()}</Text>
+      <View className={`mx-4 mb-4 p-4 rounded-[24px] border shadow-lg ${aiCoachStatus === 'Optimal' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-amber-900/20 border-amber-500/30'}`}>
+         <View className="flex-row items-center">
+            <View className={`w-2 h-2 rounded-full mr-3 shadow-md ${aiCoachStatus === 'Optimal' ? 'bg-emerald-400 shadow-emerald-400/50' : 'bg-amber-400 shadow-amber-400/50'}`} />
+            <Text className="text-[10px] font-black tracking-widest text-slate-400">AI COACH :</Text>
+            <Text className={`ml-2 text-xs font-black tracking-widest uppercase ${aiCoachStatus === 'Optimal' ? 'text-emerald-400' : 'text-amber-400'}`}>{aiCoachStatus}</Text>
          </View>
          {weatherCondition && (
-           <Text style={styles.weatherText}>📍 Weather: {weatherCondition}</Text>
+           <Text className="text-[11px] text-slate-400 mt-2 font-medium ml-5">📍 Weather: {weatherCondition}</Text>
          )}
       </View>
 
       {/* PERSONA DISPLAY */}
-      <View style={{ paddingHorizontal: 16, marginBottom: 10 }}>
-        <Text style={{ fontSize: 13, color: '#4b5563', fontWeight: 'bold' }}>
-          Active Persona (State): <Text style={{ color: activePersona === 'Normal' ? '#16a34a' : activePersona === 'Moderate' ? '#ea580c' : '#dc2626', fontSize: 16 }}>{activePersona}</Text>
+      <View className="px-4 mb-4 flex-row justify-between items-center">
+        <Text className="text-xs font-bold text-slate-500 tracking-wider">
+          Persona State:
         </Text>
+        <View className={`px-3 py-1.5 rounded-full border ${activePersona === 'Normal' ? 'bg-emerald-900/30 border-emerald-500/50' : activePersona === 'Moderate' ? 'bg-orange-900/30 border-orange-500/50' : 'bg-red-900/30 border-red-500/50'}`}>
+            <Text className={`text-[10px] font-black uppercase tracking-widest ${activePersona === 'Normal' ? 'text-emerald-400' : activePersona === 'Moderate' ? 'text-orange-400' : 'text-red-400'}`}>
+              {activePersona}
+            </Text>
+        </View>
       </View>
 
-      {/* MANUAL TEST CONTROLS (Hidden when testing real face detection) */}
+      {/* MANUAL TEST CONTROLS */}
       {isSimulating && (
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
-          <TouchableOpacity
-            onPress={() => setTestState("Normal")}
-            style={[styles.testButton, testState === "Normal" && styles.testButtonActive]}
-          >
-            <Text style={[styles.testButtonText, testState === "Normal" && styles.testButtonTextActive]}>Normal</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setTestState("Drowsy")}
-            style={[styles.testButton, testState === "Drowsy" && styles.testButtonActive]}
-          >
-            <Text style={[styles.testButtonText, testState === "Drowsy" && styles.testButtonTextActive]}>Drowsy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setTestState("Sleep")}
-            style={[styles.testButton, testState === "Sleep" && styles.testButtonActive]}
-          >
-            <Text style={[styles.testButtonText, testState === "Sleep" && styles.testButtonTextActive]}>Asleep</Text>
-          </TouchableOpacity>
+        <View className="flex-row justify-between px-4 mb-4 gap-2">
+          {["Normal", "Drowsy", "Sleep"].map(state => (
+            <TouchableOpacity
+                key={state}
+                onPress={() => setTestState(state)}
+                className={`flex-1 py-3 rounded-2xl items-center border ${testState === state ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800/40 border-slate-700/50'}`}
+            >
+                <Text className={`text-[10px] font-black tracking-wider uppercase ${testState === state ? 'text-blue-400' : 'text-slate-400'}`}>{state}</Text>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
             onPress={() => {
               setWeatherCondition("MOCKED_RAIN");
               playBeep('AI_COACH', `Simulating Rain Hazard. AI Safety Coach evaluating route conditions.`);
             }}
-            style={[styles.testButton, weatherCondition === "MOCKED_RAIN" && styles.testButtonActive]}
+            className={`flex-1 py-3 rounded-2xl items-center border ${weatherCondition === "MOCKED_RAIN" ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800/40 border-slate-700/50'}`}
           >
-            <Text style={[styles.testButtonText, weatherCondition === "MOCKED_RAIN" && styles.testButtonTextActive]}>Simulate Rain</Text>
+            <Text className={`text-[10px] font-black tracking-wider uppercase ${weatherCondition === "MOCKED_RAIN" ? 'text-blue-400' : 'text-slate-400'}`}>Rain</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {/* MAP */}
-      <View style={styles.mapWrapper}>
+      <View className="mx-4 h-[220px] rounded-[28px] overflow-hidden border border-slate-700/50 shadow-lg shadow-black/80 mb-4 bg-slate-900">
         {location ? (
           <MapView
             ref={mapRef}
@@ -552,6 +572,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
             showsTraffic={true}
             followsUserLocation={true}
             showsCompass={true}
+            userInterfaceStyle="dark"
             initialRegion={{
               latitude: location.latitude,
               longitude: location.longitude,
@@ -564,36 +585,36 @@ export default function DriverMonitorScreen({ navigation, route }) {
             {routeCoordinates.length > 0 && (
               <Polyline
                 coordinates={routeCoordinates}
-                strokeWidth={4}
-                strokeColor="#2563eb"
+                strokeWidth={5}
+                strokeColor="#38BDF8"
               />
             )}
           </MapView>
         ) : (
-          <View style={styles.center}><Text>Loading Live Map...</Text></View>
+          <View className="flex-1 justify-center items-center"><Text className="text-slate-400 text-xs font-bold tracking-widest uppercase">Initializing Radar...</Text></View>
         )}
       </View>
 
       {/* ALERT PANEL */}
-      <View style={styles.alertPanel}>
-        <View style={styles.alertHeader}>
-          <AlertTriangle size={20} color="#dc2626" />
-          <Text style={styles.alertTitle}>Alerts During Trip</Text>
+      <View className="flex-1 bg-slate-800/30 mx-4 mb-4 rounded-[28px] p-5 border border-slate-700/40">
+        <View className="flex-row items-center mb-4">
+          <ShieldCheck size={18} color="#38BDF8" />
+          <Text className="ml-2 text-xs font-black text-[#38BDF8] tracking-[0.2em] uppercase">Live Trip Log</Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
           {alerts.length === 0 ? (
-            <Text style={styles.emptyAlerts}>No alerts yet. Stay safe!</Text>
+            <Text className="text-slate-500 text-center mt-6 text-sm font-medium">All tracking metrics nominal.</Text>
           ) : (
             alerts.map((alert) => {
               const style = getAlertStyle(alert.type);
               return (
-                <View key={alert.id} style={[styles.alertCard, { backgroundColor: style.bg, borderColor: style.border }]}>
+                <View key={alert.id} style={{ backgroundColor: style.bg, borderColor: style.border }} className="p-3 rounded-2xl mb-3 border flex-row justify-between items-center">
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.alertTypeText, { color: style.text }]}>{alert.type.toUpperCase()}</Text>
-                    <Text style={styles.alertMessageText}>{alert.message}</Text>
+                    <Text style={{ color: style.text }} className="font-black text-[10px] tracking-widest uppercase opacity-80">{alert.type}</Text>
+                    <Text className="text-slate-200 text-xs font-medium mt-1 leading-4 mr-2">{alert.message}</Text>
                   </View>
-                  <Text style={styles.alertTimeText}>{alert.time}</Text>
+                  <Text className="text-[10px] text-slate-400 font-bold tracking-wider">{alert.time}</Text>
                 </View>
               );
             })
@@ -643,60 +664,15 @@ export default function DriverMonitorScreen({ navigation, route }) {
             alertsDetails: allTripAlerts
           });
         }}
-        style={styles.stopButton}
+        className="mx-4 mb-8 bg-red-500/10 border border-red-500/30 py-5 rounded-[28px] items-center shadow-lg shadow-red-900/20 active:scale-95 transition-transform"
       >
-        <Text style={styles.stopButtonText}>Stop Trip</Text>
+        <View className="flex-row items-center">
+            <Square size={16} color="#ef4444" fill="#ef4444" className="mr-2" />
+            <Text className="text-red-500 text-sm font-black tracking-[0.2em] uppercase">End Trip & Analyze</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3f4f6", paddingTop: 60, paddingHorizontal: 16 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: "bold", color: "#2563eb" },
-  boldText: { fontWeight: "bold", fontSize: 16 },
-  grayText: { color: "gray" },
-  row: { flexDirection: "row", marginBottom: 16 },
-  infoText: { marginBottom: 4, fontStyle: 'italic' },
-  drivingStatus: { color: '#16a34a', fontWeight: 'bold' },
-  cameraWrapper: { height: 130, width: 100, backgroundColor: "black", borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: '#d1d5db' },
-  mapWrapper: { height: 200, borderRadius: 20, overflow: "hidden", marginBottom: 16, borderWidth: 1, borderColor: '#d1d5db' },
-  alertPanel: { backgroundColor: "white", padding: 16, borderRadius: 12, marginBottom: 16, flex: 1 },
-  alertHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  alertTitle: { marginLeft: 8, fontWeight: "bold", color: "#dc2626", fontSize: 16 },
-  emptyAlerts: { color: 'gray', textAlign: 'center', marginTop: 20 },
-  alertCard: { padding: 12, borderRadius: 10, marginBottom: 10, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  alertTypeText: { fontWeight: 'bold', fontSize: 12 },
-  alertMessageText: { color: '#374151', fontSize: 14, marginTop: 2 },
-  alertTimeText: { fontSize: 10, color: 'gray', marginLeft: 8 },
-  stopButton: { backgroundColor: "#dc2626", padding: 16, borderRadius: 12, alignItems: "center", marginBottom: 30 },
-  stopButtonText: { color: "white", fontSize: 18, fontWeight: "bold" },
-  simButton: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 8, marginTop: 12, alignSelf: 'flex-start' },
-  simButtonText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
-  permissionText: { marginBottom: 20, color: 'gray', textAlign: 'center' },
-  permissionButton: { backgroundColor: '#2563eb', padding: 12, borderRadius: 8 },
-  permissionButtonText: { color: 'white', fontWeight: 'bold' },
-  testButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#e5e7eb', borderWidth: 1, borderColor: '#d1d5db' },
-  testButtonActive: { backgroundColor: '#2563eb', borderColor: '#1d4ed8' },
-  testButtonText: { fontSize: 12, color: '#4b5563', fontWeight: 'bold' },
-  testButtonTextActive: { color: 'white' },
-  aiCoachCard: { 
-    backgroundColor: 'white', 
-    marginHorizontal: 16, 
-    marginBottom: 12, 
-    padding: 12, 
-    borderRadius: 12, 
-    borderWidth: 1, 
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  aiCoachLabel: { fontSize: 11, fontWeight: '900', color: '#64748b', letterSpacing: 0.5 },
-  aiCoachStatusText: { fontSize: 13, fontWeight: 'bold' },
-  weatherText: { fontSize: 11, color: '#64748b', marginTop: 4, fontStyle: 'italic' }
-});
+const styles = StyleSheet.create({});

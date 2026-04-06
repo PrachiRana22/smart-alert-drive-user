@@ -91,10 +91,12 @@ export default function ProfileScreen() {
                     {/* Username */}
                     <View>
                         <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Username</Text>
-                        <View className="flex-row items-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 shadow-sm">
-                            <User size={20} className="mr-3" color={isDark ? "#64748B" : "#94A3B8"} />
+                        <View className="flex-row items-center bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200 dark:shadow-none">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <User size={22} color={isDark ? "#3B82F6" : "#2563EB"} />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-0"
+                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-1"
                                 placeholder="Change Username"
                                 placeholderTextColor="#94A3B8"
                                 value={username}
@@ -106,10 +108,12 @@ export default function ProfileScreen() {
                     {/* Password */}
                     <View>
                         <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Password</Text>
-                        <View className="flex-row items-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 shadow-sm">
-                            <Lock size={20} className="mr-3" color={isDark ? "#64748B" : "#94A3B8"} />
+                        <View className="flex-row items-center bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200 dark:shadow-none">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <Lock size={22} color={isDark ? "#3B82F6" : "#2563EB"} />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-0"
+                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-1"
                                 placeholder="Change Password"
                                 placeholderTextColor="#94A3B8"
                                 secureTextEntry
@@ -122,10 +126,12 @@ export default function ProfileScreen() {
                     {/* Profile */}
                     <View>
                         <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Profile Info</Text>
-                        <View className="flex-row items-center border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl px-5 py-4 shadow-sm">
-                            <View className="w-5 h-5 mr-3 rounded border-2 border-gray-300 dark:border-slate-600" />
+                        <View className="flex-row items-center bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200 dark:shadow-none">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <View className="w-5 h-5 rounded border-2 border-primary dark:border-blue-400" />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-0"
+                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-1"
                                 placeholder="Change Profile"
                                 placeholderTextColor="#94A3B8"
                                 value={profileData}

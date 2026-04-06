@@ -59,11 +59,11 @@ export default function SignupScreen() {
                 <View className="w-full max-w-md self-center">
                     {/* Header */}
                     <View className="items-center mb-10">
-                        <View className="mb-6 shadow-sm">
+                        <View className="mb-6 shadow-md">
                             <Image 
                                 source={require('../../assets/App_Inside_Logo.jpeg')} 
-                                className="w-24 h-24 rounded-3xl"
-                                resizeMode="cover"
+                                className="w-32 h-32 rounded-3xl"
+                                resizeMode="contain"
                             />
                         </View>
                         <Text className="text-4xl font-outfit-bold text-secondary mb-2 tracking-tight">Create Account</Text>
@@ -74,10 +74,12 @@ export default function SignupScreen() {
 
                     {/* Input Fields */}
                     <View className="space-y-4 mb-8">
-                        <View className="flex-row items-center border border-gray-200 bg-surface rounded-2xl px-4 py-3 shadow-sm">
-                            <User color="#94A3B8" size={20} className="mr-3" />
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <User color="#2563EB" size={22} />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-secondary py-0"
+                                className="flex-1 font-outfit text-base text-secondary py-1"
                                 placeholder="Full Name"
                                 placeholderTextColor="#94A3B8"
                                 value={name}
@@ -85,10 +87,12 @@ export default function SignupScreen() {
                             />
                         </View>
 
-                        <View className="flex-row items-center border border-gray-200 bg-surface rounded-2xl px-4 py-3 shadow-sm">
-                            <Mail color="#94A3B8" size={20} className="mr-3" />
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <Mail color="#2563EB" size={22} />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-secondary py-0"
+                                className="flex-1 font-outfit text-base text-secondary py-1"
                                 placeholder="Email Address"
                                 placeholderTextColor="#94A3B8"
                                 keyboardType="email-address"
@@ -98,33 +102,37 @@ export default function SignupScreen() {
                             />
                         </View>
 
-                        <View className="flex-row items-center border border-gray-200 bg-surface rounded-2xl px-4 py-3 shadow-sm">
-                            <Lock color="#94A3B8" size={20} className="mr-3" />
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <Lock color="#2563EB" size={22} />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-secondary py-0"
+                                className="flex-1 font-outfit text-base text-secondary py-1"
                                 placeholder="Password"
                                 placeholderTextColor="#94A3B8"
                                 secureTextEntry={!showPassword}
                                 value={password}
                                 onChangeText={setPassword}
                             />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                {showPassword ? <EyeOff color="#94A3B8" size={20} /> : <Eye color="#94A3B8" size={20} />}
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
+                                {showPassword ? <EyeOff color="#94A3B8" size={22} /> : <Eye color="#94A3B8" size={22} />}
                             </TouchableOpacity>
                         </View>
 
-                        <View className="flex-row items-center border border-gray-200 bg-surface rounded-2xl px-4 py-3 shadow-sm">
-                            <Lock color="#94A3B8" size={20} className="mr-3" />
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
+                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                <Lock color="#2563EB" size={22} />
+                            </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-secondary py-0"
+                                className="flex-1 font-outfit text-base text-secondary py-1"
                                 placeholder="Confirm Password"
                                 placeholderTextColor="#94A3B8"
                                 secureTextEntry={!showConfirmPassword}
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
                             />
-                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                                {showConfirmPassword ? <EyeOff color="#94A3B8" size={20} /> : <Eye color="#94A3B8" size={20} />}
+                            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} className="p-1">
+                                {showConfirmPassword ? <EyeOff color="#94A3B8" size={22} /> : <Eye color="#94A3B8" size={22} />}
                             </TouchableOpacity>
                         </View>
                     </View>

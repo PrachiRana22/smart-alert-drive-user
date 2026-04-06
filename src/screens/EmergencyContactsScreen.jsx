@@ -124,39 +124,58 @@ export default function EmergencyContactsScreen({ navigation }) {
           <View style={[styles.addForm, isDark && styles.darkCard]}>
             <Text style={[styles.formTitle, isDark && styles.darkTitle]}>Add New Contact</Text>
             
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={[styles.input, isDark && styles.darkInput]}
-              placeholder="e.g. John Doe"
-              placeholderTextColor="#94a3b8"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.phoneRow}>
-              <View style={[styles.prefixBox, isDark && styles.darkPrefixBox]}>
-                <Text style={styles.prefixText}>+91</Text>
-              </View>
-              <TextInput
-                style={[styles.input, { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }, isDark && styles.darkInput]}
-                placeholder="10-digit number"
-                placeholderTextColor="#94a3b8"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="numeric"
-                maxLength={10}
-              />
+            <View style={[styles.inputContainer, isDark && styles.darkInputContainer]}>
+                <View style={styles.iconBubble}>
+                    <Ionicons name="person" size={22} color={isDark ? "#3b82f6" : "#2563eb"} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Full Name</Text>
+                    <TextInput
+                      style={[styles.inputNoBorder, isDark && styles.darkInputText]}
+                      placeholder="e.g. John Doe"
+                      placeholderTextColor="#94a3b8"
+                      value={name}
+                      onChangeText={setName}
+                    />
+                </View>
             </View>
 
-            <Text style={styles.label}>Relation</Text>
-            <TextInput
-              style={[styles.input, isDark && styles.darkInput]}
-              placeholder="e.g. Brother, Friend"
-              placeholderTextColor="#94a3b8"
-              value={relation}
-              onChangeText={setRelation}
-            />
+            <View style={[styles.inputContainer, isDark && styles.darkInputContainer]}>
+                <View style={styles.iconBubble}>
+                    <Ionicons name="call" size={22} color={isDark ? "#3b82f6" : "#2563eb"} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Phone Number</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.prefixTextModern}>+91</Text>
+                        <TextInput
+                          style={[styles.inputNoBorder, isDark && styles.darkInputText, { flex: 1 }]}
+                          placeholder="10-digit number"
+                          placeholderTextColor="#94a3b8"
+                          value={phone}
+                          onChangeText={setPhone}
+                          keyboardType="numeric"
+                          maxLength={10}
+                        />
+                    </View>
+                </View>
+            </View>
+
+            <View style={[styles.inputContainer, isDark && styles.darkInputContainer]}>
+                <View style={styles.iconBubble}>
+                    <Ionicons name="people" size={22} color={isDark ? "#3b82f6" : "#2563eb"} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Relation</Text>
+                    <TextInput
+                      style={[styles.inputNoBorder, isDark && styles.darkInputText]}
+                      placeholder="e.g. Brother, Friend"
+                      placeholderTextColor="#94a3b8"
+                      value={relation}
+                      onChangeText={setRelation}
+                    />
+                </View>
+            </View>
 
             <View style={styles.formActions}>
               <TouchableOpacity 
@@ -213,14 +232,14 @@ const styles = StyleSheet.create({
   addButtonText: { color: "#fff", fontWeight: "bold", fontSize: 16, marginLeft: 8 },
   
   addForm: { backgroundColor: "#fff", padding: 20, borderRadius: 15, marginTop: 10, elevation: 3, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 8 },
-  formTitle: { fontSize: 18, fontWeight: "bold", color: "#1e293b", marginBottom: 15 },
-  label: { fontSize: 13, color: "#64748b", marginBottom: 5, fontWeight: "600" },
-  input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10, padding: 12, fontSize: 15, color: "#334155", marginBottom: 15 },
-  darkInput: { backgroundColor: "#0f172a", borderColor: "#334155", color: "#fff" },
-  phoneRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
-  prefixBox: { backgroundColor: "#e2e8f0", padding: 12, borderTopLeftRadius: 10, borderBottomLeftRadius: 10, borderWidth: 1, borderColor: "#cbd5e1", borderRightWidth: 0, height: 46 },
-  darkPrefixBox: { backgroundColor: "#334155", borderColor: "#475569" },
-  prefixText: { fontWeight: "bold", color: "#475569" },
+  formTitle: { fontSize: 18, fontWeight: "bold", color: "#1e293b", marginBottom: 20 },
+  inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderWidth: 1, borderColor: "#f1f5f9", borderRadius: 28, paddingHorizontal: 20, paddingVertical: 12, marginBottom: 16, shadowColor: "#cbd5e1", shadowOpacity: 0.2, shadowRadius: 10, elevation: 2 },
+  darkInputContainer: { backgroundColor: "#1e293b", borderColor: "#334155", shadowColor: "transparent" },
+  iconBubble: { backgroundColor: "rgba(37, 99, 235, 0.1)", padding: 10, borderRadius: 16, marginRight: 16 },
+  inputNoBorder: { padding: 0, fontSize: 16, color: "#1e293b", marginTop: 4 },
+  darkInputText: { color: "#fff" },
+  prefixTextModern: { fontSize: 16, fontWeight: "bold", color: "#64748b", marginRight: 8, marginTop: 4 },
+  label: { fontSize: 12, color: "#94a3b8", fontWeight: "600" },
   
   formActions: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
   cancelBtn: { padding: 12, paddingHorizontal: 20, marginRight: 10 },

@@ -176,9 +176,12 @@ export default function HomeScreen({ navigation }) {
                 {/* START TRIP BUTTON */}
                 <TouchableOpacity
                     onPress={() => navigation.navigate('TripSetup')}
-                    style={styles.startBtn}
+                    className="bg-primary py-5 rounded-[28px] items-center justify-center mt-8 mb-4 shadow-xl shadow-primary/40 active:scale-95 transition-transform border border-blue-500"
                 >
-                    <Text style={styles.startBtnText}>Start Trip</Text>
+                    <View className="flex-row items-center">
+                        <Text className="text-white text-lg font-outfit-bold tracking-[0.15em] uppercase mr-1">Start Trip</Text>
+                        <ChevronRight color="white" size={24} />
+                    </View>
                 </TouchableOpacity>
 
             </ScrollView>
@@ -224,8 +227,6 @@ const styles = StyleSheet.create({
     reportRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
     reportLabel: { color: '#64748B' },
     reportValue: { fontWeight: 'bold', color: '#1E293B' },
-    startBtn: { backgroundColor: "#2563EB", padding: 18, borderRadius: 15, alignItems: "center", marginTop: 30 },
-    startBtnText: { color: "#FFF", fontSize: 18, fontWeight: "bold" },
     bottomNav: { 
         flexDirection: "row", justifyContent: "space-between", alignItems: "center", 
         paddingHorizontal: 30, paddingVertical: 20, backgroundColor: "#FFF", borderTopWidth: 1, borderTopColor: "#E2E8F0" 
