@@ -8,9 +8,11 @@ export default function ForgotPasswordScreen() {
     const [email, setEmail] = useState('');
 
     const handleResetPassword = () => {
-        // Implement password reset logic here later
-        alert("Password reset link sent to " + email);
-        navigation.goBack();
+        if (!email) {
+            return alert("Please enter your email address.");
+        }
+        // Navigate to confirmation screen, passing the email
+        navigation.navigate('EmailSentConfirmation', { email: email });
     };
 
     return (

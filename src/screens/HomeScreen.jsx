@@ -32,7 +32,7 @@ export default function HomeScreen({ navigation }) {
     const vehicle = vehicles && vehicles.length > 0 ? vehicles[0] : null;
 
     // Dynamic Calculations
-    const totalAlerts = trips?.reduce((acc, t) => acc + (t.alertsCount || 0), 0) || 0;
+    const totalAlerts = trips?.reduce((acc, t) => acc + (t.alerts_count || t.alertsCount || 0), 0) || 0;
     const computedSafetyScore = trips?.length > 0 ? Math.max(0, 100 - (totalAlerts * 3)) : 100;
 
     const getGradeDetails = (score) => {

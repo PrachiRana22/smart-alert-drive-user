@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Vibration, AppState } from "react-native";
+import { View, Text, TouchableOpacity, Alert, StyleSheet, ScrollView, Vibration, AppState, Modal } from "react-native";
 import { Camera, useCameraDevice, useCameraPermission, useFrameProcessor, runAsync } from 'react-native-vision-camera';
 import { useFaceDetector } from 'react-native-vision-camera-face-detector';
 import { Worklets } from 'react-native-worklets-core';
@@ -12,7 +12,7 @@ import { AlertTriangle, ShieldCheck, Square, Smartphone, Clock, Activity } from 
 import { AuthContext } from "../context/AuthContext";
 
 export default function DriverMonitorScreen({ navigation, route }) {
-  const { user, reportAlert, updateTripStatus, resolveAlert } = React.useContext(AuthContext);
+  const { user, reportAlert, updateTripStatus, resolveAlert, sendEmergencyEmail } = React.useContext(AuthContext);
 
   const { tripId, start, end, vehicleName, vehicleNumber, routeCoords, destinationCoords } = route.params || {};
   const persona = user?.persona || 'Normal';
@@ -46,6 +46,13 @@ export default function DriverMonitorScreen({ navigation, route }) {
   const [eyesClosedFrames, setEyesClosedFrames] = useState(0);
   const [faceStatusText, setFaceStatusText] = useState("Status: Monitoring");
   const [activePersona, setActivePersona] = useState("Normal"); // Dynamic persona state
+
+  // Face Tracking Loss + SOS states
+  const [missingFaceFrames, setMissingFaceFrames] = useState(0);
+  const [consecutiveFaceLossAlerts, setConsecutiveFaceLossAlerts] = useState(0);
+  const [consecutiveCriticalAlerts, setConsecutiveCriticalAlerts] = useState(0);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [emergencyTimer, setEmergencyTimer] = useState(0);
 
   // Blink tracking
   const [blinkTimestamps, setBlinkTimestamps] = useState([]);
@@ -121,12 +128,12 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   const handleFacesDetectedJS = Worklets.createRunOnJS((faces, isSim) => {
     // Transform formatting to match the old expected format
-    if (!isSim && faces && faces.length > 0) {
+    if (!isSim) {
       const mapped = {
-        faces: faces.map(f => ({
+        faces: faces ? faces.map(f => ({
           leftEyeOpenProbability: f.leftEyeOpenProbability,
           rightEyeOpenProbability: f.rightEyeOpenProbability
-        }))
+        })) : []
       };
       handleFacesDetected(mapped);
     }
@@ -138,9 +145,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
       runAsync(frame, () => {
         'worklet';
         const faces = detectFaces(frame);
-        if (faces.length > 0) {
-          handleFacesDetectedJS(faces, isSimulating);
-        }
+        handleFacesDetectedJS(faces, isSimulating);
       });
     }
   }, [isSimulating, handleFacesDetectedJS]);
@@ -160,8 +165,9 @@ export default function DriverMonitorScreen({ navigation, route }) {
       } else if (testStateRef.current === "Sleep") {
         emulateEyesClosed = true;
       }
+      const isLost = testStateRef.current === "Lost";
       const mockResult = {
-        faces: [{
+        faces: isLost ? [] : [{
           leftEyeOpenProbability: emulateEyesClosed ? 0.1 : 0.9,
           rightEyeOpenProbability: emulateEyesClosed ? 0.1 : 0.9,
         }]
@@ -174,6 +180,45 @@ export default function DriverMonitorScreen({ navigation, route }) {
   }, [isSimulating]);
 
   // Monitor prolonged eye closure based on slow frames
+
+  // Monitor missing face frames
+  useEffect(() => {
+    // Face not detected logic - trigger every 50 frames of absence (~2 seconds)
+    if (missingFaceFrames > 0 && missingFaceFrames % 50 === 0) {
+       addAlert('Moderate', '⚠️ Face not detected in camera. Please face forward.', 'Face Not Detected');
+       setFaceStatusText("Warning - Face Not Detected");
+       playBeep('Moderate', 'Face not detected in camera. Please face forward.');
+       
+       setConsecutiveFaceLossAlerts(prev => {
+           const next = prev + 1;
+           if (next >= 3 && !showEmergencyModal) {
+              setShowEmergencyModal(true);
+              setEmergencyTimer(5);
+              return 0; // reset memory
+           }
+           return next;
+       });
+    }
+  }, [missingFaceFrames, showEmergencyModal]);
+
+  // Emergency SOS Countdown Timer
+  useEffect(() => {
+    if (showEmergencyModal && emergencyTimer > 0) {
+       const id = setTimeout(() => setEmergencyTimer(prev => prev - 1), 1000);
+       return () => clearTimeout(id);
+    } else if (showEmergencyModal && emergencyTimer === 0) {
+       // Dispatch email!
+       setShowEmergencyModal(false);
+       if (sendEmergencyEmail) {
+           sendEmergencyEmail({
+               trip: tripId,
+               location: `Lat: ${location?.latitude}, Lon: ${location?.longitude}`,
+               alert_type: 'No Driver Detected (SOS Protocol)'
+           });
+       }
+       Alert.alert("SOS Dispatched", "Emergency alert dispatched to registered phone numbers and mail IDs.");
+    }
+  }, [showEmergencyModal, emergencyTimer, location, tripId]);
   useEffect(() => {
     if (eyesClosedFrames === 0) {
       if (!wasEyesClosedLastFrame) {
@@ -299,7 +344,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
     setActivePersona(type === 'Speeding' ? 'Moderate' : type);
 
     const newAlert = {
-      id: Date.now().toString(),
+      id: Date.now().toString() + Math.random().toString(),
       type, // 'Normal', 'Moderate', 'Critical', 'Speeding'
       message,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -325,17 +370,15 @@ export default function DriverMonitorScreen({ navigation, route }) {
       }
 
       if (type === 'Critical') {
-        Alert.alert(
-          "CRITICAL ALERT",
-          message,
-          [{
-            text: "I'm Awake", onPress: () => {
-              setEyesClosedFrames(0);
-              stopBeep();
-              if (backendId) resolveAlert(backendId);
+        setConsecutiveCriticalAlerts(prev => {
+            const next = prev + 1;
+            if (next >= 3 && !showEmergencyModal) {
+               setShowEmergencyModal(true);
+               setEmergencyTimer(5);
+               return 0;
             }
-          }]
-        );
+            return next;
+        });
       }
     };
     reportAndAlert();
@@ -343,9 +386,14 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   const handleFacesDetected = ({ faces }) => {
     if (faces.length === 0) {
-      // No face detected, assume eyes closed or log missing face
+      // No face detected
+      setMissingFaceFrames(prev => prev + 1);
       return;
     }
+
+    // Face is detected! reset the missing tracker
+    setMissingFaceFrames(0);
+    setConsecutiveFaceLossAlerts(0);
 
     const face = faces[0];
     const leftEye = face.leftEyeOpenProbability;
@@ -500,6 +548,37 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   return (
     <View className="flex-1 bg-[#0B1120] pt-14 px-2">
+      {/* EMERGENCY SOS POPUP OVERLAY */}
+      {showEmergencyModal && (
+        <Modal visible={true} transparent={true} animationType="fade">
+            <View className="flex-1 bg-red-600/95 justify-center items-center px-6">
+                <AlertTriangle size={64} color="#ffffff" className="mb-6" />
+                <Text className="text-4xl font-black text-white uppercase tracking-widest text-center mb-2">Driver Unresponsive</Text>
+                <Text className="text-lg text-red-100 font-medium text-center mb-8 px-4">Face not detected for a prolonged period. Emergency SOS protocol initiated.</Text>
+                
+                <View className="w-40 h-40 bg-white/20 rounded-full justify-center items-center mb-10 border border-white/50">
+                    <Text className="text-7xl font-black text-white">{emergencyTimer}</Text>
+                </View>
+                
+                <Text className="text-white/80 font-bold mb-4 uppercase tracking-[0.2em] text-xs">Press button to cancel auto-dispatch</Text>
+                
+                <TouchableOpacity
+                   onPress={() => {
+                       setShowEmergencyModal(false);
+                       setConsecutiveFaceLossAlerts(0);
+                       setConsecutiveCriticalAlerts(0);
+                       setMissingFaceFrames(0);
+                       setEyesClosedFrames(0);
+                       stopBeep();
+                   }}
+                   className="bg-white px-12 py-5 rounded-full shadow-xl shadow-black/50 active:scale-95"
+                >
+                    <Text className="text-red-600 font-black text-xl tracking-[0.1em] uppercase">I'M OK</Text>
+                </TouchableOpacity>
+            </View>
+        </Modal>
+      )}
+
       {/* HEADER HUD */}
       <View className="flex-row justify-between items-center px-4 mb-5">
         <View>
@@ -553,6 +632,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
         </View>
       </View>
 
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
       {/* LIVE TELEMETRY */}
       <View className="mx-4 mb-4 flex-row gap-3">
         <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
@@ -599,7 +679,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
       {/* MANUAL TEST CONTROLS */}
       {isSimulating && (
         <View className="flex-row justify-between px-4 mb-4 gap-2">
-          {["Normal", "Drowsy", "Sleep"].map(state => (
+          {["Normal", "Drowsy", "Sleep", "Lost"].map(state => (
             <TouchableOpacity
                 key={state}
                 onPress={() => setTestState(state)}
@@ -665,13 +745,13 @@ export default function DriverMonitorScreen({ navigation, route }) {
       </View>
 
       {/* ALERT PANEL */}
-      <View className="flex-1 bg-slate-800/30 mx-4 mb-4 rounded-[28px] p-5 border border-slate-700/40">
+      <View className="bg-slate-800/30 mx-4 mb-4 rounded-[28px] p-5 border border-slate-700/40">
         <View className="flex-row items-center mb-4">
           <ShieldCheck size={18} color="#38BDF8" />
           <Text className="ml-2 text-xs font-black text-[#38BDF8] tracking-[0.2em] uppercase">Live Trip Log</Text>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <View>
           {alerts.length === 0 ? (
             <Text className="text-slate-500 text-center mt-6 text-sm font-medium">All tracking metrics nominal.</Text>
           ) : (
@@ -688,7 +768,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
               );
             })
           )}
-        </ScrollView>
+        </View>
       </View>
 
       {/* STOP BUTTON */}
@@ -733,13 +813,20 @@ export default function DriverMonitorScreen({ navigation, route }) {
             alertsDetails: allTripAlerts
           });
         }}
-        className="mx-4 mb-8 bg-red-500/10 border border-red-500/30 py-5 rounded-[28px] items-center shadow-lg shadow-red-900/20 active:scale-95 transition-transform"
+        className="mx-4 mb-10 mt-2 active:scale-95 transition-transform"
+        activeOpacity={0.8}
       >
-        <View className="flex-row items-center">
-            <Square size={16} color="#ef4444" fill="#ef4444" className="mr-2" />
-            <Text className="text-red-500 text-sm font-black tracking-[0.2em] uppercase">End Trip & Analyze</Text>
+        <View className="bg-red-600 rounded-[24px] py-4 items-center shadow-xl shadow-red-600/60 border border-red-500 overflow-hidden relative">
+            <View className="absolute top-0 w-full h-[50%] bg-white/10" />
+            <View className="flex-row items-center z-10 py-1">
+                <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center mr-3 border border-white/30">
+                    <Square size={12} color="#ffffff" fill="#ffffff" />
+                </View>
+                <Text className="text-white text-[15px] font-black tracking-[0.25em] uppercase" style={{ textShadowColor: 'rgba(0,0,0,0.3)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 }}>End Trip & Analyze</Text>
+            </View>
         </View>
       </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }

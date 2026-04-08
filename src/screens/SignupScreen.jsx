@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Mail, Lock, User, ShieldCheck, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, ShieldCheck, Eye, EyeOff, Check, X } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 
 export default function SignupScreen() {
@@ -19,6 +19,11 @@ export default function SignupScreen() {
         return re.test(email);
     };
 
+    const hasMinLength = password.length >= 6;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+
     const handleSignup = async () => {
         const trimmedEmail = email.trim().toLowerCase();
         const trimmedName = name.trim();
@@ -29,8 +34,8 @@ export default function SignupScreen() {
         if (!validateEmail(trimmedEmail)) {
             return alert("Please enter a valid email address.");
         }
-        if (password.length < 6) {
-            return alert("Password must be at least 6 characters long.");
+        if (!hasMinLength || !hasUppercase || !hasNumber || !hasSpecialChar) {
+            return alert("Please ensure your password meets all requirements.");
         }
         if (password !== confirmPassword) {
             return alert("Passwords do not match.");
@@ -102,21 +107,45 @@ export default function SignupScreen() {
                             />
                         </View>
 
-                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
-                            <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
-                                <Lock color="#2563EB" size={22} />
+                        <View className="flex-col">
+                            <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
+                                <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
+                                    <Lock color="#2563EB" size={22} />
+                                </View>
+                                <TextInput
+                                    className="flex-1 font-outfit text-base text-secondary py-1"
+                                    placeholder="Password"
+                                    placeholderTextColor="#94A3B8"
+                                    secureTextEntry={!showPassword}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
+                                    {showPassword ? <EyeOff color="#94A3B8" size={22} /> : <Eye color="#94A3B8" size={22} />}
+                                </TouchableOpacity>
                             </View>
-                            <TextInput
-                                className="flex-1 font-outfit text-base text-secondary py-1"
-                                placeholder="Password"
-                                placeholderTextColor="#94A3B8"
-                                secureTextEntry={!showPassword}
-                                value={password}
-                                onChangeText={setPassword}
-                            />
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
-                                {showPassword ? <EyeOff color="#94A3B8" size={22} /> : <Eye color="#94A3B8" size={22} />}
-                            </TouchableOpacity>
+
+                            {/* Password Validation Checklist */}
+                            {password.length > 0 && (
+                                <View className="px-4 mt-3 mb-2">
+                                    <View className="flex-row items-center mb-1">
+                                        {hasMinLength ? <Check size={16} color="#16a34a" /> : <X size={16} color="#dc2626" />}
+                                        <Text className={`ml-2 text-sm font-outfit ${hasMinLength ? 'text-green-600' : 'text-red-600'}`}>6+ characters</Text>
+                                    </View>
+                                    <View className="flex-row items-center mb-1">
+                                        {hasUppercase ? <Check size={16} color="#16a34a" /> : <X size={16} color="#dc2626" />}
+                                        <Text className={`ml-2 text-sm font-outfit ${hasUppercase ? 'text-green-600' : 'text-red-600'}`}>uppercase</Text>
+                                    </View>
+                                    <View className="flex-row items-center mb-1">
+                                        {hasNumber ? <Check size={16} color="#16a34a" /> : <X size={16} color="#dc2626" />}
+                                        <Text className={`ml-2 text-sm font-outfit ${hasNumber ? 'text-green-600' : 'text-red-600'}`}>number</Text>
+                                    </View>
+                                    <View className="flex-row items-center">
+                                        {hasSpecialChar ? <Check size={16} color="#16a34a" /> : <X size={16} color="#dc2626" />}
+                                        <Text className={`ml-2 text-sm font-outfit ${hasSpecialChar ? 'text-green-600' : 'text-red-600'}`}>special character</Text>
+                                    </View>
+                                </View>
+                            )}
                         </View>
 
                         <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">

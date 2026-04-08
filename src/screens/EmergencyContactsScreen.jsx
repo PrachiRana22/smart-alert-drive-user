@@ -15,10 +15,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../context/AuthContext";
 
 export default function EmergencyContactsScreen({ navigation }) {
-  const { emergencyContacts, addEmergencyContact, deleteEmergencyContact, theme } = useContext(AuthContext);
+  const { emergencyContacts, addEmergencyContact, deleteEmergencyContact, updateEmergencyContact, sendEmergencyEmail, theme } = useContext(AuthContext);
   
   const [showAdd, setShowAdd] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [relation, setRelation] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -26,9 +29,12 @@ export default function EmergencyContactsScreen({ navigation }) {
   const isDark = theme === 'dark';
 
   const validateData = () => {
-    if (!name.trim()) return "Please enter a name.";
-    if (!phone.trim() || phone.length < 10) return "Please enter a valid phone number.";
-    if (!relation.trim()) return "Please enter a relation (e.g. Brother, Wife).";
+    if (!name.trim()) return "Full Name is required.";
+    const emailStr = email.trim();
+    if (!emailStr) return "Email Address is required.";
+    if (!/^\S+@\S+\.\S+$/.test(emailStr)) return "Please enter a valid email address.";
+    if (!phone.trim() || phone.length < 10) return "Valid 10-digit phone number is required.";
+    if (!relation.trim()) return "Relation (e.g. Brother) is required.";
     return null;
   };
 
@@ -41,23 +47,46 @@ export default function EmergencyContactsScreen({ navigation }) {
 
     setIsSaving(true);
     try {
-      await addEmergencyContact({
+      const contactData = {
         name: name.trim(),
+        email: email.trim().toLowerCase(),
         phone_number: "+91" + phone.replace(/[^0-9]/g, ''),
         relation: relation.trim()
-      });
+      };
+
+      if (isEditing) {
+        await updateEmergencyContact(editId, contactData);
+      } else {
+        await addEmergencyContact(contactData);
+      }
       
       // Reset form
       setName("");
+      setEmail("");
       setPhone("");
       setRelation("");
       setShowAdd(false);
+      setIsEditing(false);
+      setEditId(null);
     } catch (err) {
-      Alert.alert("Error", "Could not add emergency contact.");
+      Alert.alert("Error", `Could not ${isEditing ? 'update' : 'add'} emergency contact.`);
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleEdit = (contact) => {
+    setName(contact.name);
+    setEmail(contact.email || "");
+    // Extract 10 digits from phone number (removing +91)
+    const phoneDigits = contact.phone_number.replace("+91", "").replace(/[^0-9]/g, '');
+    setPhone(phoneDigits);
+    setRelation(contact.relation);
+    setEditId(contact.id || contact.pk);
+    setIsEditing(true);
+    setShowAdd(true);
+  };
+
 
   const handleDelete = (id) => {
     Alert.alert(
@@ -112,17 +141,27 @@ export default function EmergencyContactsScreen({ navigation }) {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.contactName, isDark && styles.darkTitle]}>{contact.name}</Text>
                 <Text style={styles.contactDetails}>{contact.relation} • {contact.phone_number}</Text>
+                {contact.email ? (
+                  <Text style={styles.contactEmail}>{contact.email}</Text>
+                ) : (
+                  <Text style={styles.missingInfoText}>⚠️ Missing Email - Tap Pencil to Fix</Text>
+                )}
               </View>
-              <TouchableOpacity onPress={() => handleDelete(contact.id || contact.pk)} style={styles.deleteBtn}>
-                <Ionicons name="trash-outline" size={20} color="#ef4444" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity onPress={() => handleEdit(contact)} style={[styles.actionBtn, { backgroundColor: "#eff6ff", marginRight: 8 }]}>
+                  <Ionicons name="pencil-outline" size={18} color="#3b82f6" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(contact.id || contact.pk)} style={[styles.actionBtn, { backgroundColor: "#fee2e2" }]}>
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
 
         {showAdd ? (
           <View style={[styles.addForm, isDark && styles.darkCard]}>
-            <Text style={[styles.formTitle, isDark && styles.darkTitle]}>Add New Contact</Text>
+            <Text style={[styles.formTitle, isDark && styles.darkTitle]}>{isEditing ? 'Edit Contact' : 'Add New Contact'}</Text>
             
             <View style={[styles.inputContainer, isDark && styles.darkInputContainer]}>
                 <View style={styles.iconBubble}>
@@ -136,6 +175,24 @@ export default function EmergencyContactsScreen({ navigation }) {
                       placeholderTextColor="#94a3b8"
                       value={name}
                       onChangeText={setName}
+                    />
+                </View>
+            </View>
+
+            <View style={[styles.inputContainer, isDark && styles.darkInputContainer]}>
+                <View style={styles.iconBubble}>
+                    <Ionicons name="mail" size={22} color={isDark ? "#3b82f6" : "#2563eb"} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Email Address</Text>
+                    <TextInput
+                      style={[styles.inputNoBorder, isDark && styles.darkInputText]}
+                      placeholder="e.g. john@example.com"
+                      placeholderTextColor="#94a3b8"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
                     />
                 </View>
             </View>
@@ -204,6 +261,7 @@ export default function EmergencyContactsScreen({ navigation }) {
           </TouchableOpacity>
         )}
 
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -224,8 +282,11 @@ const styles = StyleSheet.create({
   
   contactCard: { flexDirection: "row", backgroundColor: "#fff", padding: 16, borderRadius: 15, marginBottom: 15, alignItems: "center", elevation: 2, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 5 },
   darkCard: { backgroundColor: "#1e293b", shadowColor: "transparent" },
-  contactName: { fontSize: 16, fontWeight: "bold", color: "#1e293b", marginBottom: 4 },
-  contactDetails: { fontSize: 14, color: "#64748b" },
+  contactName: { fontSize: 16, fontWeight: "bold", color: "#1e293b", marginBottom: 2 },
+  contactDetails: { fontSize: 13, color: "#64748b", marginBottom: 2 },
+  contactEmail: { fontSize: 13, color: "#3b82f6" },
+  missingInfoText: { fontSize: 11, color: "#ef4444", fontWeight: "bold", marginTop: 2 },
+  actionBtn: { padding: 8, borderRadius: 10 },
   deleteBtn: { padding: 10, backgroundColor: "#fee2e2", borderRadius: 10 },
   
   addButton: { flexDirection: "row", backgroundColor: "#2563eb", padding: 16, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 10, shadowColor: "#2563eb", shadowOpacity: 0.3, shadowRadius: 10 },

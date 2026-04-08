@@ -8,7 +8,7 @@ export default function DriverProfileScreen() {
 
     const { user, trips, vehicles, emergencyContacts } = React.useContext(AuthContext);
     const vehicle = vehicles && vehicles.length > 0 ? vehicles[0] : null;
-    const recentTrip = trips?.length > 0 ? trips[trips.length - 1] : user?.recentTrip;
+    const recentTrip = trips?.length > 0 ? trips[0] : user?.recentTrip;
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
 

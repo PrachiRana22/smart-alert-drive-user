@@ -83,6 +83,17 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const updateEmergencyContact = async (id, contactData) => {
+        try {
+            const response = await api.put(`/user/emergency-contacts/${id}/`, contactData);
+            setEmergencyContacts(prev => prev.map(c => (c.id === id || c.pk === id) ? response.data : c));
+            return response.data;
+        } catch (error) {
+            console.error("Failed to update emergency contact:", error);
+            throw error;
+        }
+    };
+
     const fetchTrips = async () => {
         try {
             const response = await api.get('/user/trips/');
@@ -137,6 +148,17 @@ export const AuthProvider = ({ children }) => {
             return response.data;
         } catch (error) {
             console.error("Failed to resolve alert:", error);
+        }
+    };
+
+    const sendEmergencyEmail = async (alertData) => {
+        try {
+            const response = await api.post('/user/emergency-contacts/send-alert/', alertData);
+            console.log("Emergency email dispatched:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("Failed to send emergency email:", error);
+            throw error;
         }
     };
 
@@ -324,7 +346,9 @@ export const AuthProvider = ({ children }) => {
             fetchEmergencyContacts,
             addEmergencyContact,
             deleteEmergencyContact,
-            resolveAlert
+            updateEmergencyContact,
+            resolveAlert,
+            sendEmergencyEmail
         }}>
             {children}
         </AuthContext.Provider>

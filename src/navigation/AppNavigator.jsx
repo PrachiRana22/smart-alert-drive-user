@@ -5,6 +5,8 @@ import { View, ActivityIndicator } from 'react-native';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import EmailSentConfirmationScreen from '../screens/EmailSentConfirmationScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -68,6 +70,8 @@ export default function AppNavigator() {
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Signup" component={SignupScreen} />
                         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+                        <Stack.Screen name="EmailSentConfirmation" component={EmailSentConfirmationScreen} />
+                        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
                     </>
                 )}
             </Stack.Navigator>

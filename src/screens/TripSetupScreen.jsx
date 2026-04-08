@@ -62,7 +62,16 @@ export default function TripSetupScreen({ navigation }) {
       if (showEndSuggestions && end.length > 2 && !endCoords) {
         setIsSearchingEnd(true);
         try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(end)}&format=json&addressdetails=1&limit=5&countrycodes=in`, {
+          let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(end)}&format=json&addressdetails=1&limit=5&countrycodes=in`;
+          
+          if (startCoords) {
+            // Prioritize results near the start location using a ~50km bounding box
+            const lonGap = 0.5; 
+            const latGap = 0.5;
+            url += `&viewbox=${startCoords.longitude - lonGap},${startCoords.latitude - latGap},${startCoords.longitude + lonGap},${startCoords.latitude + latGap}`;
+          }
+
+          const response = await fetch(url, {
             headers: { 'User-Agent': 'SmartDrive_UserSide/1.0 (contact@smartdrive.com)' }
           });
           const data = await response.json();
@@ -77,7 +86,7 @@ export default function TripSetupScreen({ navigation }) {
       }
     }, 600);
     return () => clearTimeout(delay);
-  }, [end, showEndSuggestions]);
+  }, [end, showEndSuggestions, startCoords]);
 
   const handleSelectStart = (item) => {
     setStart(item.display_name);
