@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { User, Lock, Pencil, ChevronLeft } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../context/AuthContext';
 
 export default function ProfileScreen() {
     const navigation = useNavigation();
     const { user, updateUser, updatePersona } = React.useContext(AuthContext);
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const isDark = false;
 
     // Form states
     const [username, setUsername] = useState(user?.full_name || user?.username || '');
@@ -52,22 +50,22 @@ export default function ProfileScreen() {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 bg-slate-50 dark:bg-slate-900"
+            className="flex-1 bg-slate-50"
         >
             {/* Header */}
-            <View className="flex-row items-center pt-16 pb-4 px-6 bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-800 shadow-sm z-10 w-full">
-                <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2 rounded-full bg-gray-50 dark:bg-slate-700">
+            <View className="flex-row items-center pt-16 pb-4 px-6 bg-white border-b border-gray-100 shadow-sm z-10 w-full">
+                <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2 rounded-full bg-gray-50">
                     <ChevronLeft color={isDark ? "#E2E8F0" : "#1E293B"} size={24} />
                 </TouchableOpacity>
                 <View className="flex-1 items-center pr-6">
-                    <Text className="text-xl font-outfit-bold text-slate-800 dark:text-white">Profile</Text>
+                    <Text className="text-xl font-outfit-bold text-slate-800">Profile</Text>
                 </View>
             </View>
 
             <ScrollView className="flex-1 px-6 pt-10" showsVerticalScrollIndicator={false}>
                 {/* Profile Picture Placeholder */}
                 <View className="items-center mb-10 mt-2">
-                    <View className="w-32 h-32 rounded-full border-4 border-white dark:border-slate-800 items-center justify-center bg-gray-100 dark:bg-slate-700 shadow-md relative overflow-hidden">
+                    <View className="w-32 h-32 rounded-full border-4 border-white items-center justify-center bg-gray-100 shadow-md relative overflow-hidden">
                         {profileImage ? (
                             <Image 
                                 source={{ uri: profileImage.startsWith('data:') ? profileImage : `data:image/jpeg;base64,${profileImage}` }} 
@@ -79,7 +77,7 @@ export default function ProfileScreen() {
                         )}
                         <TouchableOpacity 
                             onPress={pickImage}
-                            className="absolute bottom-0 right-0 bg-primary p-3 rounded-full shadow-md shadow-primary/40 border-2 border-white dark:border-slate-800 active:scale-95 transition-transform"
+                            className="absolute bottom-0 right-0 bg-primary p-3 rounded-full shadow-md shadow-primary/40 border-2 border-white active:scale-95 transition-transform"
                         >
                             <Pencil color="#FFFFFF" size={16} />
                         </TouchableOpacity>
@@ -90,13 +88,13 @@ export default function ProfileScreen() {
                 <View className="space-y-6 mb-12">
                     {/* Username */}
                     <View>
-                        <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Username</Text>
-                        <View className="flex-row items-center bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200 dark:shadow-none">
+                        <Text className="text-sm font-outfit-medium text-gray-500 mb-2 ml-1">Username</Text>
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
                             <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
                                 <User size={22} color={isDark ? "#3B82F6" : "#2563EB"} />
                             </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-1"
+                                className="flex-1 font-outfit text-base text-slate-800 py-1"
                                 placeholder="Change Username"
                                 placeholderTextColor="#94A3B8"
                                 value={username}
@@ -107,13 +105,13 @@ export default function ProfileScreen() {
 
                     {/* Password */}
                     <View>
-                        <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Password</Text>
-                        <View className="flex-row items-center bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200 dark:shadow-none">
+                        <Text className="text-sm font-outfit-medium text-gray-500 mb-2 ml-1">Password</Text>
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
                             <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
                                 <Lock size={22} color={isDark ? "#3B82F6" : "#2563EB"} />
                             </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-1"
+                                className="flex-1 font-outfit text-base text-slate-800 py-1"
                                 placeholder="Change Password"
                                 placeholderTextColor="#94A3B8"
                                 secureTextEntry
@@ -125,13 +123,13 @@ export default function ProfileScreen() {
 
                     {/* Profile */}
                     <View>
-                        <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Profile Info</Text>
-                        <View className="flex-row items-center bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200 dark:shadow-none">
+                        <Text className="text-sm font-outfit-medium text-gray-500 mb-2 ml-1">Profile Info</Text>
+                        <View className="flex-row items-center bg-white border border-gray-100 rounded-[28px] px-5 py-4 shadow-sm shadow-gray-200">
                             <View className="bg-primary/10 p-2.5 rounded-2xl mr-4">
-                                <View className="w-5 h-5 rounded border-2 border-primary dark:border-blue-400" />
+                                <View className="w-5 h-5 rounded border-2 border-primary" />
                             </View>
                             <TextInput
-                                className="flex-1 font-outfit text-base text-slate-800 dark:text-gray-100 py-1"
+                                className="flex-1 font-outfit text-base text-slate-800 py-1"
                                 placeholder="Change Profile"
                                 placeholderTextColor="#94A3B8"
                                 value={profileData}
@@ -142,15 +140,15 @@ export default function ProfileScreen() {
 
                     {/* Driving Persona */}
                     <View>
-                        <Text className="text-sm font-outfit-medium text-gray-500 dark:text-slate-400 mb-2 ml-1">Driving Persona</Text>
-                        <View className="flex-row justify-between bg-white dark:bg-slate-800 p-1 rounded-2xl border border-gray-200 dark:border-slate-700">
+                        <Text className="text-sm font-outfit-medium text-gray-500 mb-2 ml-1">Driving Persona</Text>
+                        <View className="flex-row justify-between bg-white p-1 rounded-2xl border border-gray-200">
                             {['Normal', 'Moderate', 'Critical'].map((p) => (
                                 <TouchableOpacity
                                     key={p}
                                     onPress={() => setPersona(p)}
                                     className={`flex-1 py-3 items-center rounded-xl ${persona === p ? 'bg-primary' : 'bg-transparent'}`}
                                 >
-                                    <Text className={`font-outfit-bold text-sm ${persona === p ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+                                    <Text className={`font-outfit-bold text-sm ${persona === p ? 'text-white' : 'text-slate-500'}`}>
                                         {p}
                                     </Text>
                                 </TouchableOpacity>

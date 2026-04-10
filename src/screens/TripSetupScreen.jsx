@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { MapPin, Navigation, ArrowLeft, Home, Map as MapIcon, Bell, Search, X, Map } from 'lucide-react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { useColorScheme } from 'nativewind';
 import polyline from '@mapbox/polyline';
 import { AuthContext } from '../context/AuthContext';
 import * as Location from 'expo-location';
@@ -11,8 +10,7 @@ import * as Location from 'expo-location';
 // const GOOGLE_MAPS_APIKEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 export default function TripSetupScreen({ navigation }) {
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = false;
   const { saveTrip, vehicles, fetchVehicles, user } = React.useContext(AuthContext);
   
   useEffect(() => {
@@ -40,11 +38,22 @@ export default function TripSetupScreen({ navigation }) {
       if (showStartSuggestions && start.length > 2 && !startCoords) {
         setIsSearchingStart(true);
         try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(start)}&format=json&addressdetails=1&limit=5&countrycodes=in`, {
-            headers: { 'User-Agent': 'SmartDrive_UserSide/1.0 (contact@smartdrive.com)' }
+          const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(start)}&limit=5&lang=en`, {
+            headers: { 'User-Agent': 'SmartDrive_UserSide/1.0' }
           });
           const data = await response.json();
-          setStartSuggestions(data);
+          // Map Photon data to Nominatim-like structure for internal compatibility
+          const mapped = data.features.map(f => {
+            const props = f.properties;
+            const disp = [props.name, props.city || props.town || props.village, props.state, props.country].filter(Boolean).join(', ');
+            return {
+              display_name: disp,
+              lat: f.geometry.coordinates[1],
+              lon: f.geometry.coordinates[0],
+              ...props
+            };
+          });
+          setStartSuggestions(mapped);
         } catch (err) {
           console.log("Start Search Error:", err);
         } finally {
@@ -53,7 +62,7 @@ export default function TripSetupScreen({ navigation }) {
       } else {
         setStartSuggestions([]);
       }
-    }, 600);
+    }, 300);
     return () => clearTimeout(delay);
   }, [start, showStartSuggestions]);
 
@@ -62,20 +71,29 @@ export default function TripSetupScreen({ navigation }) {
       if (showEndSuggestions && end.length > 2 && !endCoords) {
         setIsSearchingEnd(true);
         try {
-          let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(end)}&format=json&addressdetails=1&limit=5&countrycodes=in`;
+          let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(end)}&limit=5&lang=en`;
           
           if (startCoords) {
-            // Prioritize results near the start location using a ~50km bounding box
-            const lonGap = 0.5; 
-            const latGap = 0.5;
-            url += `&viewbox=${startCoords.longitude - lonGap},${startCoords.latitude - latGap},${startCoords.longitude + lonGap},${startCoords.latitude + latGap}`;
+            // Prioritize results near the start location
+            url += `&lat=${startCoords.latitude}&lon=${startCoords.longitude}`;
           }
 
           const response = await fetch(url, {
-            headers: { 'User-Agent': 'SmartDrive_UserSide/1.0 (contact@smartdrive.com)' }
+            headers: { 'User-Agent': 'SmartDrive_UserSide/1.0' }
           });
           const data = await response.json();
-          setEndSuggestions(data);
+          // Map Photon data to Nominatim-like structure
+          const mapped = data.features.map(f => {
+            const props = f.properties;
+            const disp = [props.name, props.city || props.town || props.village, props.state, props.country].filter(Boolean).join(', ');
+            return {
+              display_name: disp,
+              lat: f.geometry.coordinates[1],
+              lon: f.geometry.coordinates[0],
+              ...props
+            };
+          });
+          setEndSuggestions(mapped);
         } catch (err) {
           console.log("End Search Error:", err);
         } finally {
@@ -84,7 +102,7 @@ export default function TripSetupScreen({ navigation }) {
       } else {
         setEndSuggestions([]);
       }
-    }, 600);
+    }, 300);
     return () => clearTimeout(delay);
   }, [end, showEndSuggestions, startCoords]);
 
@@ -109,17 +127,35 @@ export default function TripSetupScreen({ navigation }) {
         setLoading(false);
         return;
       }
-      let location = await Location.getCurrentPositionAsync({});
+      let location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Highest });
       const coords = { latitude: location.coords.latitude, longitude: location.coords.longitude };
       setStartCoords(coords);
       
-      // Reverse geocode to get city/area name
+      // Reverse geocode to get a more detailed address
       const reverse = await Location.reverseGeocodeAsync(coords);
       if (reverse.length > 0) {
         const addr = reverse[0];
-        setStart(`${addr.name || addr.street || ""}, ${addr.city || addr.region || ""}`.trim().replace(/^,/, ''));
+        const addressParts = [
+          addr.name,
+          addr.street,
+          addr.district,
+          addr.city || addr.subregion,
+          addr.region
+        ].filter(part => part && part !== addr.city); // basic deduplication
+        
+        const addressString = addressParts.join(', ').replace(/, ,/g, ',').trim();
+        setStart(addressString || "Current Location");
       } else {
         setStart("Current Location");
+      }
+
+      // Animate map to current location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          ...coords,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }, 1000);
       }
       
       setShowStartSuggestions(false);
@@ -269,7 +305,7 @@ export default function TripSetupScreen({ navigation }) {
   };
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-slate-900 pt-16">
+    <View className="flex-1 bg-slate-50 pt-16">
       <ScrollView 
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }} 
         showsVerticalScrollIndicator={false}
@@ -281,19 +317,19 @@ export default function TripSetupScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.navigate('Home')} className="mr-4">
             <ArrowLeft size={28} color={isDark ? "#60A5FA" : "#2563eb"} />
           </TouchableOpacity>
-          <Text className="text-3xl font-bold text-blue-600 dark:text-blue-400">Smart Drive Alert</Text>
+          <Text className="text-3xl font-bold text-blue-600">Smart Drive Alert</Text>
         </View>
 
         {/* Start Location Input */}
         <View className="z-50 mb-4">
-          <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex-row items-center shadow-sm border border-transparent dark:border-slate-700">
+          <View className="bg-white p-4 rounded-2xl flex-row items-center shadow-sm border border-transparent">
             <MapPin size={20} color={isDark ? "#60A5FA" : "#2563eb"} />
             <TextInput
               placeholder="Start Location (e.g., Paldi)"
               value={start}
               onChangeText={(text) => { setStart(text); setShowStartSuggestions(true); setStartCoords(null); }}
               onFocus={() => { if(start.length > 2) setShowStartSuggestions(true); setShowEndSuggestions(false); }}
-              className="ml-3 flex-1 text-base text-slate-800 dark:text-gray-100"
+              className="ml-3 flex-1 text-base text-slate-800"
               placeholderTextColor="#9ca3af"
             />
             {isSearchingStart ? (
@@ -307,7 +343,7 @@ export default function TripSetupScreen({ navigation }) {
 
           {/* Start Suggestions */}
           {showStartSuggestions && (startSuggestions.length > 0 || isSearchingStart) && (
-            <View className="absolute top-[60px] left-0 right-0 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden z-[100]">
+            <View className="absolute top-[60px] left-0 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100]">
               {isSearchingStart && startSuggestions.length === 0 ? (
                  <View className="p-4 items-center">
                    <Text className="text-slate-400">Searching locations...</Text>
@@ -316,12 +352,12 @@ export default function TripSetupScreen({ navigation }) {
                 startSuggestions.map((item, index) => (
                   <TouchableOpacity
                     key={index}
-                    className="p-4 border-b border-gray-50 dark:border-slate-700 flex-row items-center"
+                    className="p-4 border-b border-gray-50 flex-row items-center"
                     onPress={() => handleSelectStart(item)}
                   >
                     <Map size={18} color="#94a3af" className="mr-3" />
                     <View className="flex-1">
-                      <Text className="text-slate-800 dark:text-gray-100 font-medium" numberOfLines={1}>
+                      <Text className="text-slate-800 font-medium" numberOfLines={1}>
                         {item.display_name.split(',')[0]}
                       </Text>
                       <Text className="text-slate-400 text-xs" numberOfLines={1}>
@@ -339,23 +375,23 @@ export default function TripSetupScreen({ navigation }) {
             onPress={useCurrentLocation} 
             className="flex-row items-center mt-2 px-1"
           >
-            <View className="bg-blue-50 dark:bg-blue-900/40 p-1.5 rounded-full mr-2">
+            <View className="bg-blue-50 p-1.5 rounded-full mr-2">
               <Navigation size={14} color="#2563eb" />
             </View>
-            <Text className="text-blue-600 dark:text-blue-400 font-medium text-sm">Use Current Location</Text>
+            <Text className="text-blue-600 font-medium text-sm">Use Current Location</Text>
           </TouchableOpacity>
         </View>
 
         {/* End Location Input */}
         <View className="z-40 mb-6">
-          <View className="bg-white dark:bg-slate-800 p-4 rounded-2xl flex-row items-center shadow-sm border border-transparent dark:border-slate-700">
+          <View className="bg-white p-4 rounded-2xl flex-row items-center shadow-sm border border-transparent">
             <Navigation size={20} color={isDark ? "#60A5FA" : "#2563eb"} />
             <TextInput
               placeholder="Destination (e.g., Vadodara)"
               value={end}
               onChangeText={(text) => { setEnd(text); setShowEndSuggestions(true); setEndCoords(null); }}
               onFocus={() => { if(end.length > 2) setShowEndSuggestions(true); setShowStartSuggestions(false); }}
-              className="ml-3 flex-1 text-base text-slate-800 dark:text-gray-100"
+              className="ml-3 flex-1 text-base text-slate-800"
               placeholderTextColor="#9ca3af"
             />
             {isSearchingEnd ? (
@@ -369,7 +405,7 @@ export default function TripSetupScreen({ navigation }) {
 
           {/* End Suggestions */}
           {showEndSuggestions && (endSuggestions.length > 0 || isSearchingEnd) && (
-            <View className="absolute top-[60px] left-0 right-0 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 overflow-hidden z-[100]">
+            <View className="absolute top-[60px] left-0 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100]">
               {isSearchingEnd && endSuggestions.length === 0 ? (
                  <View className="p-4 items-center">
                    <Text className="text-slate-400">Searching locations...</Text>
@@ -378,12 +414,12 @@ export default function TripSetupScreen({ navigation }) {
                 endSuggestions.map((item, index) => (
                   <TouchableOpacity
                     key={index}
-                    className="p-4 border-b border-gray-50 dark:border-slate-700 flex-row items-center"
+                    className="p-4 border-b border-gray-50 flex-row items-center"
                     onPress={() => handleSelectEnd(item)}
                   >
                     <Map size={18} color="#94a3af" className="mr-3" />
                     <View className="flex-1">
-                      <Text className="text-slate-800 dark:text-gray-100 font-medium" numberOfLines={1}>
+                      <Text className="text-slate-800 font-medium" numberOfLines={1}>
                         {item.display_name.split(',')[0]}
                       </Text>
                       <Text className="text-slate-400 text-xs" numberOfLines={1}>
@@ -401,21 +437,21 @@ export default function TripSetupScreen({ navigation }) {
         <TouchableOpacity
           onPress={fetchRoute}
           disabled={loading}
-          className={`py-3 rounded-xl mb-6 flex-row justify-center items-center shadow-sm ${loading ? 'bg-blue-400 dark:bg-blue-800' : 'bg-blue-100 dark:bg-blue-900/50'}`}
+          className={`py-3 rounded-xl mb-6 flex-row justify-center items-center shadow-sm ${loading ? 'bg-blue-400' : 'bg-blue-100'}`}
         >
           {loading ? (
             <ActivityIndicator color="#2563eb" />
           ) : (
             <>
               <Search size={18} color={isDark ? "#60A5FA" : "#2563eb"} />
-              <Text className="text-blue-600 dark:text-blue-400 font-bold ml-2 text-base">Preview Route</Text>
+              <Text className="text-blue-600 font-bold ml-2 text-base">Preview Route</Text>
             </>
           )}
         </TouchableOpacity>
 
         {/* Map View */}
-        {(startCoords && endCoords) && (
-          <View className="bg-white dark:bg-slate-800 p-2 rounded-3xl mb-6 shadow-md border border-gray-100 dark:border-slate-700 overflow-hidden">
+        {(startCoords || endCoords) && (
+          <View className="bg-white p-2 rounded-3xl mb-6 shadow-md border border-gray-100 overflow-hidden">
             <View style={{ height: 250, borderRadius: 20, overflow: 'hidden' }}>
               <MapView
                 ref={mapRef}
@@ -427,8 +463,8 @@ export default function TripSetupScreen({ navigation }) {
                   longitudeDelta: 0.1,
                 }}
               >
-                <Marker coordinate={startCoords} title="Start" pinColor="green" />
-                <Marker coordinate={endCoords} title="Destination" pinColor="red" />
+                {startCoords && <Marker coordinate={startCoords} title="Start" pinColor="green" />}
+                {endCoords && <Marker coordinate={endCoords} title="Destination" pinColor="red" />}
 
                 {routeCoordinates.length > 0 && (
                   <Polyline
@@ -449,7 +485,12 @@ export default function TripSetupScreen({ navigation }) {
                 </View>
                 <View className="items-end">
                   <Text className="text-gray-500 text-xs font-semibold uppercase">Est. Time</Text>
-                  <Text className="text-blue-700 font-bold text-lg">{Math.ceil(duration)} min</Text>
+                  <Text className="text-blue-700 font-bold text-lg">
+                    {duration < 60 
+                      ? `${Math.ceil(duration)} min` 
+                      : `${Math.floor(duration / 60)}h ${Math.round(duration % 60)}m`
+                    }
+                  </Text>
                 </View>
               </View>
             )}
@@ -461,7 +502,7 @@ export default function TripSetupScreen({ navigation }) {
         {/* GO BUTTON */}
         <TouchableOpacity
           onPress={startTrip}
-          className="bg-blue-600 dark:bg-blue-500 py-4 rounded-2xl items-center shadow-lg shadow-blue-300 dark:shadow-blue-900/50 mt-2"
+          className="bg-blue-600 py-4 rounded-2xl items-center shadow-lg shadow-blue-300 mt-2"
         >
           <Text className="text-white text-xl font-bold tracking-wide">
             START TRIP
@@ -471,18 +512,18 @@ export default function TripSetupScreen({ navigation }) {
       </ScrollView>
 
       {/* Bottom Navigation */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-800 flex-row justify-around py-4 border-t border-gray-200 dark:border-slate-700 shadow-xl">
+      <View className="absolute bottom-0 left-0 right-0 bg-white flex-row justify-around py-4 border-t border-gray-200 shadow-xl">
         <TouchableOpacity onPress={() => navigation.navigate('Home')} className="items-center">
           <Home size={24} color={isDark ? "#64748B" : "#9ca3af"} />
-          <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">Home</Text>
+          <Text className="text-xs text-slate-500 mt-1">Home</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('Trips')} className="items-center">
           <MapIcon size={24} color={isDark ? "#60A5FA" : "#2563eb"} />
-          <Text className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-semibold">Trips</Text>
+          <Text className="text-xs text-blue-600 mt-1 font-semibold">Trips</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('Alerts')} className="items-center">
           <Bell size={24} color={isDark ? "#64748B" : "#9ca3af"} />
-          <Text className="text-xs text-slate-500 dark:text-slate-400 mt-1">Alerts</Text>
+          <Text className="text-xs text-slate-500 mt-1">Alerts</Text>
         </TouchableOpacity>
       </View>
     </View>

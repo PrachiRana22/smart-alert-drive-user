@@ -518,13 +518,13 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
   if (!hasPermission) {
     return (
-      <View className="flex-1 bg-[#0B1120] justify-center items-center px-6">
-        <View className="bg-slate-800/40 p-8 rounded-[32px] border border-slate-700/50 items-center w-full shadow-2xl shadow-black">
-            <View className="w-16 h-16 rounded-full bg-blue-500/20 items-center justify-center mb-6 border border-blue-500/30">
-                <ShieldCheck size={32} color="#38BDF8" />
+      <View className="flex-1 bg-slate-50 justify-center items-center px-6">
+        <View className="bg-white p-8 rounded-[32px] border border-slate-200 items-center w-full shadow-xl shadow-slate-200">
+            <View className="w-16 h-16 rounded-full bg-blue-50 items-center justify-center mb-6 border border-blue-100">
+                <ShieldCheck size={32} color="#2563EB" />
             </View>
-            <Text className="text-xl font-black text-white tracking-wider mb-2 uppercase text-center">Camera Access</Text>
-            <Text className="text-slate-400 text-center mb-8 font-medium leading-5">The AI Safety Coach requires camera permission to monitor driver fatigue and distraction levels continuously.</Text>
+            <Text className="text-xl font-black text-slate-800 tracking-wider mb-2 uppercase text-center">Camera Access</Text>
+            <Text className="text-slate-500 text-center mb-8 font-medium leading-5">The AI Safety Coach requires camera permission to monitor driver fatigue and distraction levels continuously.</Text>
             
             <TouchableOpacity 
                 className="bg-blue-600 w-full py-4 rounded-2xl items-center shadow-lg shadow-blue-600/30 active:scale-95 transition-transform" 
@@ -547,7 +547,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
   };
 
   return (
-    <View className="flex-1 bg-[#0B1120] pt-14 px-2">
+    <View className="flex-1 bg-slate-50 pt-14 px-2">
       {/* EMERGENCY SOS POPUP OVERLAY */}
       {showEmergencyModal && (
         <Modal visible={true} transparent={true} animationType="fade">
@@ -582,29 +582,29 @@ export default function DriverMonitorScreen({ navigation, route }) {
       {/* HEADER HUD */}
       <View className="flex-row justify-between items-center px-4 mb-5">
         <View>
-            <Text className="text-2xl font-black tracking-widest text-[#38BDF8] uppercase mb-1">Smart Drive</Text>
-            <View className="flex-row items-center border border-emerald-500/30 bg-emerald-900/20 px-2 py-1 rounded-full self-start">
+            <Text className="text-2xl font-black tracking-widest text-primary uppercase mb-1">Smart Drive</Text>
+            <View className="flex-row items-center border border-emerald-100 bg-emerald-50 px-2 py-1 rounded-full self-start">
                 <View className="w-1.5 h-1.5 rounded-full bg-[#10B981] mr-1.5 shadow-sm shadow-[#10b981]" />
-                <Text className="text-[10px] font-bold text-emerald-400 tracking-wider uppercase">Active Rider</Text>
+                <Text className="text-[10px] font-bold text-emerald-700 tracking-wider uppercase">Active Rider</Text>
             </View>
         </View>
-        <View className="bg-slate-800/60 px-4 py-2 rounded-2xl border border-slate-700/50 items-center">
+        <View className="bg-white px-4 py-2 rounded-2xl border border-slate-200 items-center shadow-sm">
           <Text className="text-[9px] font-bold text-slate-400 tracking-widest uppercase mb-0.5">Vehicle</Text>
-          <Text className="font-bold text-slate-100 text-xs">{vehicleNumber || "NOT SET"}</Text>
+          <Text className="font-bold text-slate-700 text-xs">{vehicleNumber || "NOT SET"}</Text>
         </View>
       </View>
 
       {/* TRIP INFO + CAMERA */}
       <View className="flex-row px-4 mb-4 gap-4">
         {/* Info Panel */}
-        <View className="flex-1 bg-slate-800/40 rounded-[28px] p-5 border border-slate-700/50 justify-center">
+        <View className="flex-1 bg-white rounded-[28px] p-5 border border-slate-200 justify-center shadow-sm">
             <View className="mb-4">
-                <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase mb-1">Origin</Text>
-                <Text className="text-slate-200 text-sm font-medium" numberOfLines={1}>{start || "Unknown"}</Text>
+                <Text className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1">Origin</Text>
+                <Text className="text-slate-800 text-sm font-medium" numberOfLines={1}>{start || "Unknown"}</Text>
             </View>
             <View>
-                <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase mb-1">Destination</Text>
-                <Text className="text-slate-200 text-sm font-medium" numberOfLines={1}>{end || "Unknown"}</Text>
+                <Text className="text-[10px] font-black text-slate-400 tracking-widest uppercase mb-1">Destination</Text>
+                <Text className="text-slate-800 text-sm font-medium" numberOfLines={1}>{end || "Unknown"}</Text>
             </View>
         </View>
 
@@ -635,32 +635,32 @@ export default function DriverMonitorScreen({ navigation, route }) {
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
       {/* LIVE TELEMETRY */}
       <View className="mx-4 mb-4 flex-row gap-3">
-        <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
-            <Activity size={18} color="#38BDF8" className="mb-2" />
-            <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Speed</Text>
-            <Text className="text-xl font-black text-white tracking-widest">{currentSpeed.toFixed(0)}<Text className="text-[10px] text-slate-400 font-bold ml-1">km/h</Text></Text>
+        <View className="flex-1 bg-white rounded-2xl p-3 border border-slate-200 items-center justify-center shadow-sm">
+            <Activity size={18} color="#2563EB" className="mb-2" />
+            <Text className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Speed</Text>
+            <Text className="text-xl font-black text-slate-800 tracking-widest">{currentSpeed.toFixed(0)}<Text className="text-[10px] text-slate-400 font-bold ml-1">km/h</Text></Text>
         </View>
-        <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
+        <View className="flex-1 bg-white rounded-2xl p-3 border border-slate-200 items-center justify-center shadow-sm">
             <Clock size={18} color="#10B981" className="mb-2" />
-            <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Time</Text>
-            <Text className="text-sm font-black text-white tracking-widest mt-1">{drivingTimeStr}</Text>
+            <Text className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Time</Text>
+            <Text className="text-sm font-black text-slate-800 tracking-widest mt-1">{drivingTimeStr}</Text>
         </View>
-        <View className="flex-1 bg-slate-800/40 rounded-2xl p-3 border border-slate-700/50 items-center justify-center shadow-md">
+        <View className="flex-1 bg-white rounded-2xl p-3 border border-slate-200 items-center justify-center shadow-sm">
             <Smartphone size={18} color="#f97316" className="mb-2" />
-            <Text className="text-[10px] font-black text-slate-500 tracking-widest uppercase">Phone</Text>
-            <Text className="text-xl font-black text-white tracking-widest">{phoneUsageCount}</Text>
+            <Text className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Phone</Text>
+            <Text className="text-xl font-black text-slate-800 tracking-widest">{phoneUsageCount}</Text>
         </View>
       </View>
 
       {/* AI SAFETY COACH HUD */}
-      <View className={`mx-4 mb-4 p-4 rounded-[24px] border shadow-lg ${aiCoachStatus === 'Optimal' ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-amber-900/20 border-amber-500/30'}`}>
+      <View className={`mx-4 mb-4 p-4 rounded-[24px] border shadow-md ${aiCoachStatus === 'Optimal' ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
          <View className="flex-row items-center">
-            <View className={`w-2 h-2 rounded-full mr-3 shadow-md ${aiCoachStatus === 'Optimal' ? 'bg-emerald-400 shadow-emerald-400/50' : 'bg-amber-400 shadow-amber-400/50'}`} />
-            <Text className="text-[10px] font-black tracking-widest text-slate-400">AI COACH :</Text>
-            <Text className={`ml-2 text-xs font-black tracking-widest uppercase ${aiCoachStatus === 'Optimal' ? 'text-emerald-400' : 'text-amber-400'}`}>{aiCoachStatus}</Text>
+            <View className={`w-2 h-2 rounded-full mr-3 shadow-md ${aiCoachStatus === 'Optimal' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            <Text className="text-[10px] font-black tracking-widest text-slate-500">AI COACH :</Text>
+            <Text className={`ml-2 text-xs font-black tracking-widest uppercase ${aiCoachStatus === 'Optimal' ? 'text-emerald-600' : 'text-amber-600'}`}>{aiCoachStatus}</Text>
          </View>
          {weatherCondition && (
-           <Text className="text-[11px] text-slate-400 mt-2 font-medium ml-5">📍 Weather: {weatherCondition}</Text>
+           <Text className="text-[11px] text-slate-500 mt-2 font-medium ml-5">📍 Weather: {weatherCondition}</Text>
          )}
       </View>
 
@@ -669,8 +669,8 @@ export default function DriverMonitorScreen({ navigation, route }) {
         <Text className="text-xs font-bold text-slate-500 tracking-wider">
           Persona State:
         </Text>
-        <View className={`px-3 py-1.5 rounded-full border ${activePersona === 'Normal' ? 'bg-emerald-900/30 border-emerald-500/50' : activePersona === 'Moderate' ? 'bg-orange-900/30 border-orange-500/50' : 'bg-red-900/30 border-red-500/50'}`}>
-            <Text className={`text-[10px] font-black uppercase tracking-widest ${activePersona === 'Normal' ? 'text-emerald-400' : activePersona === 'Moderate' ? 'text-orange-400' : 'text-red-400'}`}>
+        <View className={`px-3 py-1.5 rounded-full border ${activePersona === 'Normal' ? 'bg-emerald-50 border-emerald-100' : activePersona === 'Moderate' ? 'bg-orange-50 border-orange-100' : 'bg-red-50 border-red-100'}`}>
+            <Text className={`text-[10px] font-black uppercase tracking-widest ${activePersona === 'Normal' ? 'text-emerald-600' : activePersona === 'Moderate' ? 'text-orange-600' : 'text-red-600'}`}>
               {activePersona}
             </Text>
         </View>
@@ -711,7 +711,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
       )}
 
       {/* MAP */}
-      <View className="mx-4 h-[220px] rounded-[28px] overflow-hidden border border-slate-700/50 shadow-lg shadow-black/80 mb-4 bg-slate-900">
+      <View className="mx-4 h-[220px] rounded-[28px] overflow-hidden border border-slate-200 shadow-lg shadow-slate-200 mb-4 bg-slate-100">
         {location ? (
           <MapView
             ref={mapRef}
@@ -721,7 +721,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
             showsTraffic={true}
             followsUserLocation={true}
             showsCompass={true}
-            userInterfaceStyle="dark"
+            userInterfaceStyle="light"
             initialRegion={{
               latitude: location.latitude,
               longitude: location.longitude,
@@ -735,7 +735,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
               <Polyline
                 coordinates={routeCoordinates}
                 strokeWidth={5}
-                strokeColor="#38BDF8"
+                strokeColor="#2563EB"
               />
             )}
           </MapView>
@@ -745,10 +745,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
       </View>
 
       {/* ALERT PANEL */}
-      <View className="bg-slate-800/30 mx-4 mb-4 rounded-[28px] p-5 border border-slate-700/40">
+      <View className="bg-white mx-4 mb-4 rounded-[28px] p-5 border border-slate-200 shadow-sm">
         <View className="flex-row items-center mb-4">
-          <ShieldCheck size={18} color="#38BDF8" />
-          <Text className="ml-2 text-xs font-black text-[#38BDF8] tracking-[0.2em] uppercase">Live Trip Log</Text>
+          <ShieldCheck size={18} color="#2563EB" />
+          <Text className="ml-2 text-xs font-black text-primary tracking-[0.2em] uppercase">Live Trip Log</Text>
         </View>
 
         <View>
@@ -761,9 +761,9 @@ export default function DriverMonitorScreen({ navigation, route }) {
                 <View key={alert.id} style={{ backgroundColor: style.bg, borderColor: style.border }} className="p-3 rounded-2xl mb-3 border flex-row justify-between items-center">
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: style.text }} className="font-black text-[10px] tracking-widest uppercase opacity-80">{alert.type}</Text>
-                    <Text className="text-slate-200 text-xs font-medium mt-1 leading-4 mr-2">{alert.message}</Text>
+                    <Text className="text-slate-700 text-xs font-medium mt-1 leading-4 mr-2">{alert.message}</Text>
                   </View>
-                  <Text className="text-[10px] text-slate-400 font-bold tracking-wider">{alert.time}</Text>
+                  <Text className="text-[10px] text-slate-500 font-bold tracking-wider">{alert.time}</Text>
                 </View>
               );
             })

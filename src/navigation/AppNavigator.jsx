@@ -23,7 +23,6 @@ import StorageScreen from '../screens/StorageScreen';
 import AppLanguageScreen from '../screens/AppLanguageScreen';
 import AppUpdateScreen from '../screens/AppUpdateScreen';
 import HelpFeedbackScreen from '../screens/HelpFeedbackScreen';
-import DisplayThemeScreen from '../screens/DisplayThemeScreen';
 import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
 
 
@@ -61,7 +60,6 @@ export default function AppNavigator() {
                         <Stack.Screen name="AppLanguage" component={AppLanguageScreen} />
                         <Stack.Screen name="AppUpdate" component={AppUpdateScreen} />
                         <Stack.Screen name="HelpFeedback" component={HelpFeedbackScreen} />
-                        <Stack.Screen name="DisplayTheme" component={DisplayThemeScreen} />
                         <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
                     </>
                 ) : (

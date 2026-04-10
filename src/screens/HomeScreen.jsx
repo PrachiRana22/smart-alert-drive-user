@@ -1,14 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Image, StyleSheet, ScrollView } from 'react-native';
 import { Settings, Home, Users, AlertCircle, User, Menu, Bell, ChevronRight } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import { AuthContext } from '../context/AuthContext';
 import { useTranslation } from '../locales';
 
 export default function HomeScreen({ navigation }) {
     const { user, trips, licenseData, vehicles } = React.useContext(AuthContext);
-    const { colorScheme } = useColorScheme();
-    const isDark = colorScheme === 'dark';
+    const isDark = false;
     const { t } = useTranslation();
     const [currentDate, setCurrentDate] = React.useState('');
 
@@ -52,11 +50,11 @@ export default function HomeScreen({ navigation }) {
     const formattedDistance = trips?.length > 0 ? `${totalDistanceKm.toFixed(1)} km` : "0 km";
 
     return (
-        <View className="flex-1 bg-slate-50 dark:bg-slate-900">
+        <View className="flex-1 bg-slate-50">
 
             {/* 🔥 HEADER */}
             <View style={styles.header}>
-                <Text className="text-base font-semibold text-slate-500 dark:text-slate-400">{currentDate}</Text>
+                <Text className="text-base font-semibold text-slate-500">{currentDate}</Text>
 
                 <View style={styles.headerIcons}>
                     <Bell color={isDark ? "#E2E8F0" : "#1E293B"} size={26} />
@@ -71,7 +69,7 @@ export default function HomeScreen({ navigation }) {
 
             {/* ✅ Welcome */}
             <View style={{ px: 24, paddingHorizontal: 24 }}>
-                <Text className="text-3xl font-bold text-slate-800 dark:text-white">Welcome, {user.first_name || user.username}</Text>
+                <Text className="text-3xl font-bold text-slate-800">Welcome, {user.first_name || user.username}</Text>
             </View>
 
             {/* MAIN CONTENT */}
@@ -81,33 +79,33 @@ export default function HomeScreen({ navigation }) {
                 {(!user.license_number || !vehicles || vehicles.length === 0) && (
                     <TouchableOpacity 
                         onPress={() => navigation.navigate('LicenseDetails')}
-                        className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl mb-5 border border-amber-200 dark:border-amber-800 flex-row items-center justify-between shadow-sm"
+                        className="bg-amber-50 p-4 rounded-2xl mb-5 border border-amber-200 flex-row items-center justify-between shadow-sm"
                     >
                         <View className="flex-1">
                             <View className="flex-row items-center mb-1">
                                 <AlertCircle color="#B45309" size={16} />
-                                <Text className="text-amber-800 dark:text-amber-400 font-bold ml-2">Complete Profile</Text>
+                                <Text className="text-amber-800 font-bold ml-2">Complete Profile</Text>
                             </View>
-                            <Text className="text-amber-700 dark:text-amber-500 text-xs">Setup your license and vehicle to begin.</Text>
+                            <Text className="text-amber-700 text-xs">Setup your license and vehicle to begin.</Text>
                         </View>
                         <ChevronRight color="#B45309" size={20} />
                     </TouchableOpacity>
                 )}
 
                 {/* ✅ USER & VEHICLE CARD */}
-                <View className="bg-white dark:bg-slate-800 rounded-2xl p-5 flex-row justify-between items-center border border-slate-200 dark:border-slate-700 shadow-sm">
+                <View className="bg-white rounded-2xl p-5 flex-row justify-between items-center border border-slate-200 shadow-sm">
                     <View className="mb-6 z-10">
 
-                        <Text className="text-xs text-slate-400 dark:text-slate-400 mt-2">{t('home.driverName')}</Text>
-                        <Text className="text-base font-bold text-slate-800 dark:text-white">{user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}</Text>
+                        <Text className="text-xs text-slate-400 mt-2">{t('home.driverName')}</Text>
+                        <Text className="text-base font-bold text-slate-800">{user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}</Text>
 
-                        <Text className="text-xs text-slate-400 dark:text-slate-400 mt-2">{t('home.vehicleType')}</Text>
-                        <Text className="text-base font-bold text-slate-800 dark:text-white">
+                        <Text className="text-xs text-slate-400 mt-2">{t('home.vehicleType')}</Text>
+                        <Text className="text-base font-bold text-slate-800">
                             {vehicle ? `${vehicle.make} ${vehicle.model}` : 'No Vehicle Added'}
                         </Text>
 
-                        <Text className="text-xs text-slate-400 dark:text-slate-400 mt-2">{t('home.vehicleNumber')}</Text>
-                        <Text className="text-base font-bold text-slate-800 dark:text-white">{vehicle?.license_plate || '---'}</Text>
+                        <Text className="text-xs text-slate-400 mt-2">{t('home.vehicleNumber')}</Text>
+                        <Text className="text-base font-bold text-slate-800">{vehicle?.license_plate || '---'}</Text>
                     </View>
 
                     {/* Image from License Data */}
@@ -123,7 +121,7 @@ export default function HomeScreen({ navigation }) {
                                 style={styles.profileImage}
                             />
                         ) : (
-                            <View className="w-20 h-20 rounded-xl bg-slate-100 dark:bg-slate-700 justify-center items-center">
+                            <View className="w-20 h-20 rounded-xl bg-slate-100 justify-center items-center">
                                 <User size={50} color={isDark ? "#64748B" : "#94A3B8"} />
                             </View>
                         )}
@@ -137,39 +135,39 @@ export default function HomeScreen({ navigation }) {
                             <Text className="text-5xl font-black" style={{ color: gradeInfo.color }}>{gradeInfo.grade}</Text>
                             <Text className="text-sm font-bold uppercase tracking-wide mt-1" style={{ color: gradeInfo.color }}>{gradeInfo.label}</Text>
                         </View>
-                        <View className="w-[80px] h-[80px] rounded-full items-center justify-center border-4 bg-white dark:bg-slate-800" style={{ borderColor: gradeInfo.color }}>
+                        <View className="w-[80px] h-[80px] rounded-full items-center justify-center border-4 bg-white" style={{ borderColor: gradeInfo.color }}>
                             <Text className="text-2xl font-black" style={{ color: gradeInfo.color }}>{computedSafetyScore}</Text>
                             <Text className="text-[10px] font-bold text-slate-400">SCORE</Text>
                         </View>
                     </View>
-                    <Text className="text-sm font-medium mt-1 dark:text-slate-200 text-slate-700">{gradeInfo.msg}</Text>
+                    <Text className="text-sm font-medium mt-1 text-slate-700">{gradeInfo.msg}</Text>
                 </View>
 
                 {/* ✅ DRIVER STATISTICS */}
-                <View className="bg-white dark:bg-slate-800 rounded-2xl p-5 mt-5 border border-slate-200 dark:border-slate-700">
-                    <Text className="text-lg font-bold mb-4 text-slate-800 dark:text-white">{t('home.weeklyTripReport')}</Text>
+                <View className="bg-white rounded-2xl p-5 mt-5 border border-slate-200">
+                    <Text className="text-lg font-bold mb-4 text-slate-800">{t('home.weeklyTripReport')}</Text>
                     <View className="flex-row justify-around items-center mb-4">
                         <View className="items-center">
-                            <Text className="text-gray-400 dark:text-slate-500 text-xs font-semibold uppercase">{t('home.totalTrips')}</Text>
-                            <Text className="text-2xl font-bold text-slate-700 dark:text-gray-200 mt-2">{trips?.length || 0}</Text>
+                            <Text className="text-gray-400 text-xs font-semibold uppercase">{t('home.totalTrips')}</Text>
+                            <Text className="text-2xl font-bold text-slate-700 mt-2">{trips?.length || 0}</Text>
                         </View>
-                        <View className="items-center border-l border-slate-100 dark:border-slate-700 pl-6">
-                            <Text className="text-gray-400 dark:text-slate-500 text-xs font-semibold uppercase">{t('home.driveTime')}</Text>
-                            <Text className="text-2xl font-bold text-slate-700 dark:text-gray-200 mt-2">{formattedDriveTime}</Text>
+                        <View className="items-center border-l border-slate-100 pl-6">
+                            <Text className="text-gray-400 text-xs font-semibold uppercase">{t('home.driveTime')}</Text>
+                            <Text className="text-2xl font-bold text-slate-700 mt-2">{formattedDriveTime}</Text>
                         </View>
-                        <View className="items-center border-l border-slate-100 dark:border-slate-700 pl-6">
-                            <Text className="text-gray-400 dark:text-slate-500 text-xs font-semibold uppercase">{t('home.distance')}</Text>
-                            <Text className="text-2xl font-bold text-slate-700 dark:text-gray-200 mt-2">{formattedDistance}</Text>
+                        <View className="items-center border-l border-slate-100 pl-6">
+                            <Text className="text-gray-400 text-xs font-semibold uppercase">{t('home.distance')}</Text>
+                            <Text className="text-2xl font-bold text-slate-700 mt-2">{formattedDistance}</Text>
                         </View>
                     </View>
 
                     <View style={styles.reportRow}>
-                        <Text className="text-slate-500 dark:text-slate-400">{t('home.totalAlerts')}:</Text>
-                        <Text className="font-bold text-slate-800 dark:text-white">{totalAlerts}</Text>
+                        <Text className="text-slate-500">{t('home.totalAlerts')}:</Text>
+                        <Text className="font-bold text-slate-800">{totalAlerts}</Text>
                     </View>
                     <View style={styles.reportRow}>
-                        <Text className="text-slate-500 dark:text-slate-400">{t('home.totalTrips')}:</Text>
-                        <Text className="font-bold text-slate-800 dark:text-white">{trips?.length || 0}</Text>
+                        <Text className="text-slate-500">{t('home.totalTrips')}:</Text>
+                        <Text className="font-bold text-slate-800">{trips?.length || 0}</Text>
                     </View>
                 </View>
 
@@ -187,7 +185,7 @@ export default function HomeScreen({ navigation }) {
             </ScrollView>
 
             {/* BOTTOM NAV */}
-            <View className="flex-row justify-between items-center px-8 py-5 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-800">
+            <View className="flex-row justify-between items-center px-8 py-5 bg-white border-t border-slate-200">
                 <TouchableOpacity><Home color={isDark ? "#3B82F6" : "#2563EB"} size={28} /></TouchableOpacity>
                 <TouchableOpacity><Users color={isDark ? "#64748B" : "#94A3B8"} size={28} /></TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate('Alerts')}>

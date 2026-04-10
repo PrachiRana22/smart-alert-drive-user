@@ -16,10 +16,15 @@ export const AuthProvider = ({ children }) => {
     const [vehicles, setVehicles] = useState([]);
     const [emergencyContacts, setEmergencyContacts] = useState([]);
 
-    const { colorScheme: theme, setColorScheme: setTheme } = useColorScheme();
+    const theme = "light";
+    const setTheme = () => {};
+
+    const { colorScheme: nativeWindTheme, setColorScheme: setNativeWindTheme } = useColorScheme();
 
     // Check login status on mount
     useEffect(() => {
+        // Force light mode in NativeWind internal state
+        setNativeWindTheme("light");
         checkLoginStatus();
     }, []);
 
