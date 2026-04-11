@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-    View, Text, TouchableOpacity, ScrollView, TextInput, Alert 
+    View, Text, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform 
 } from 'react-native';
 import { 
     ChevronLeft, BookOpen, Activity, MessageCircle 
@@ -31,7 +31,11 @@ export default function HelpFeedbackScreen() {
     };
 
     return (
-        <View className="flex-1 bg-white">
+        <KeyboardAvoidingView 
+            behavior={Platform.OS === "ios" ? "padding" : "height"} 
+            style={{ flex: 1 }}
+        >
+            <View className="flex-1 bg-white">
 
             {/* 🔙 HEADER */}
             <View className="flex-row items-center pt-16 pb-4 px-6 border-b">
@@ -104,6 +108,7 @@ export default function HelpFeedbackScreen() {
                 </TouchableOpacity>
 
             </ScrollView>
-        </View>
+            </View>
+        </KeyboardAvoidingView>
     );
 }

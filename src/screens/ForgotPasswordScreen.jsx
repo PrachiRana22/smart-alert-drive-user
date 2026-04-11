@@ -18,13 +18,18 @@ export default function ForgotPasswordScreen() {
     return (
         <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <ScrollView 
-                contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 32, paddingBottom: 40, paddingTop: 64, justifyContent: 'center' }} 
+                contentContainerStyle={{ 
+                    flexGrow: 1, 
+                    paddingHorizontal: 32, 
+                    paddingBottom: 60, 
+                }} 
                 keyboardShouldPersistTaps="handled"
                 className="bg-background"
             >
+                <View style={{ flex: 1, justifyContent: 'center', paddingTop: 64 }}>
                 <View className="w-full max-w-md self-center">
                 {/* Back Button */}
                 <TouchableOpacity
@@ -70,6 +75,10 @@ export default function ForgotPasswordScreen() {
                         Send Reset Link
                     </Text>
                 </TouchableOpacity>
+
+                {/* Spacer for scroll room when keyboard is open */}
+                <View style={{ height: 100 }} />
+            </View>
             </View></ScrollView>
         </KeyboardAvoidingView>
     );

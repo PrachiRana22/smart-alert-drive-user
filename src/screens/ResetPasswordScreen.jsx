@@ -42,8 +42,17 @@ export default function ResetPasswordScreen() {
     };
 
     return (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-            <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 32, paddingBottom: 40, paddingTop: 64, justifyContent: 'center' }} className="bg-background" keyboardShouldPersistTaps="handled">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView 
+                contentContainerStyle={{ 
+                    flexGrow: 1, 
+                    paddingHorizontal: 32, 
+                    paddingBottom: 60, 
+                }} 
+                className="bg-background" 
+                keyboardShouldPersistTaps="handled"
+            >
+                <View style={{ flex: 1, justifyContent: 'center', paddingTop: 64 }}>
                 <View className="w-full max-w-md self-center">
                     <TouchableOpacity
                         className="w-10 h-10 bg-surface rounded-full items-center justify-center shadow-sm mb-6"
@@ -155,6 +164,10 @@ export default function ResetPasswordScreen() {
                             Reset Password
                         </Text>
                     </TouchableOpacity>
+                    
+                    {/* Spacer for scroll room when keyboard is open */}
+                    <View style={{ height: 100 }} />
+                </View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>

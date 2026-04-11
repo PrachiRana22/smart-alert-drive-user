@@ -40,7 +40,7 @@ export default function HomeScreen({ navigation }) {
         return { grade: "F", label: "High Risk", color: "#EF4444", bg: isDark ? "#7F1D1D" : "#FEF2F2", border: "#F87171", msg: "CRITICAL: You are showing highly dangerous driving patterns." };
     };
     const gradeInfo = getGradeDetails(computedSafetyScore);
-    
+
     const totalMs = trips?.reduce((acc, t) => acc + (t.driveTime || 0), 0) || 0;
     const driveHours = Math.floor(totalMs / (1000 * 60 * 60));
     const driveMinutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -57,7 +57,6 @@ export default function HomeScreen({ navigation }) {
                 <Text className="text-base font-semibold text-slate-500">{currentDate}</Text>
 
                 <View style={styles.headerIcons}>
-                    <Bell color={isDark ? "#E2E8F0" : "#1E293B"} size={26} />
                     <TouchableOpacity onPress={() => navigation.navigate('DriverProfile')}>
                         <User color={isDark ? "#E2E8F0" : "#1E293B"} size={26} />
                     </TouchableOpacity>
@@ -73,11 +72,11 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* MAIN CONTENT */}
-            <ScrollView style={{flex: 1}} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.mainContent} showsVerticalScrollIndicator={false}>
 
                 {/* ✅ COMPLETE PROFILE NUDGE */}
                 {(!user.license_number || !vehicles || vehicles.length === 0) && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => navigation.navigate('LicenseDetails')}
                         className="bg-amber-50 p-4 rounded-2xl mb-5 border border-amber-200 flex-row items-center justify-between shadow-sm"
                     >
@@ -187,8 +186,8 @@ export default function HomeScreen({ navigation }) {
             {/* BOTTOM NAV */}
             <View className="flex-row justify-between items-center px-8 py-5 bg-white border-t border-slate-200">
                 <TouchableOpacity><Home color={isDark ? "#3B82F6" : "#2563EB"} size={28} /></TouchableOpacity>
-                <TouchableOpacity><Users color={isDark ? "#64748B" : "#94A3B8"} size={28} /></TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate('Alerts')}>
+                <TouchableOpacity onPress={() => navigation.navigate('DriverProfile')}><Users color={isDark ? "#64748B" : "#94A3B8"} size={28} /></TouchableOpacity>
+                <TouchableOpacity onPress={() => navigation.navigate('DriveLog')}>
                     <AlertCircle color={isDark ? "#64748B" : "#94A3B8"} size={28} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
@@ -211,8 +210,8 @@ const styles = StyleSheet.create({
     headerIcons: { flexDirection: "row", alignItems: "center", gap: 15 },
     welcomeName: { fontSize: 26, fontWeight: "bold", color: "#1E293B" },
     mainContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 },
-    userCard: { 
-        backgroundColor: "#FFF", borderRadius: 20, padding: 20, 
+    userCard: {
+        backgroundColor: "#FFF", borderRadius: 20, padding: 20,
         flexDirection: "row", justifyContent: "space-between", alignItems: "center",
         borderWidth: 1, borderColor: "#E2E8F0", elevation: 2
     },
@@ -225,8 +224,8 @@ const styles = StyleSheet.create({
     reportRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
     reportLabel: { color: '#64748B' },
     reportValue: { fontWeight: 'bold', color: '#1E293B' },
-    bottomNav: { 
-        flexDirection: "row", justifyContent: "space-between", alignItems: "center", 
-        paddingHorizontal: 30, paddingVertical: 20, backgroundColor: "#FFF", borderTopWidth: 1, borderTopColor: "#E2E8F0" 
+    bottomNav: {
+        flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+        paddingHorizontal: 30, paddingVertical: 20, backgroundColor: "#FFF", borderTopWidth: 1, borderTopColor: "#E2E8F0"
     }
 });

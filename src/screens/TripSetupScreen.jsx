@@ -282,7 +282,8 @@ export default function TripSetupScreen({ navigation }) {
         start_location: start,
         end_location: end,
         distance_km: distance || 0,
-        status: 'ONGOING'
+        status: 'ONGOING',
+        route_coords: routeCoordinates // Save the decoded polyline for history
       };
 
       const savedTrip = await saveTrip(tripData);
@@ -521,9 +522,9 @@ export default function TripSetupScreen({ navigation }) {
           <MapIcon size={24} color={isDark ? "#60A5FA" : "#2563eb"} />
           <Text className="text-xs text-blue-600 mt-1 font-semibold">Trips</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Alerts')} className="items-center">
-          <Bell size={24} color={isDark ? "#64748B" : "#9ca3af"} />
-          <Text className="text-xs text-slate-500 mt-1">Alerts</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('DriveLog')} className="items-center">
+          <Bell size={24} color={isDark ? "#64748B" : "#94a3af"} />
+          <Text className="text-xs text-slate-500 mt-1">Logs</Text>
         </TouchableOpacity>
       </View>
     </View>

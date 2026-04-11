@@ -10,7 +10,7 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import AlertsScreen from '../screens/AlertsScreen';
+import DriveLogScreen from '../screens/DriveLogScreen';
 import TripSetupScreen from '../screens/TripSetupScreen';
 import DriverMonitorScreen from '../screens/DriverMonitorScreen';
 import DriverProfileScreen from '../screens/DriverProfileScreen';
@@ -24,6 +24,7 @@ import AppLanguageScreen from '../screens/AppLanguageScreen';
 import AppUpdateScreen from '../screens/AppUpdateScreen';
 import HelpFeedbackScreen from '../screens/HelpFeedbackScreen';
 import EmergencyContactsScreen from '../screens/EmergencyContactsScreen';
+import TripDetailsScreen from '../screens/TripDetailsScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -47,7 +48,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Home" component={HomeScreen} />
                         <Stack.Screen name="Profile" component={ProfileScreen} />
                         <Stack.Screen name="Settings" component={SettingsScreen} />
-                        <Stack.Screen name="Alerts" component={AlertsScreen} />
+                        <Stack.Screen name="DriveLog" component={DriveLogScreen} />
                         <Stack.Screen name="TripSetup" component={TripSetupScreen} />
                         <Stack.Screen name="DriverMonitor" component={DriverMonitorScreen} />
                         <Stack.Screen name="DriverProfile" component={DriverProfileScreen}/>
@@ -61,6 +62,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="AppUpdate" component={AppUpdateScreen} />
                         <Stack.Screen name="HelpFeedback" component={HelpFeedbackScreen} />
                         <Stack.Screen name="EmergencyContacts" component={EmergencyContactsScreen} />
+                        <Stack.Screen name="TripDetails" component={TripDetailsScreen} />
                     </>
                 ) : (
                     // 🔒 AUTH STACK (Unauthorized)

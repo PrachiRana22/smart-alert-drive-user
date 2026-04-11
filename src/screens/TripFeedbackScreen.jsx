@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import { Star } from "lucide-react-native";
 import { AuthContext } from "../context/AuthContext";
@@ -43,7 +43,11 @@ export default function TripFeedbackScreen({ navigation, route }) {
   } : null;
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      style={{ flex: 1 }}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer} style={styles.container}>
       <Text style={styles.title}>Trip Analytics Dashboard</Text>
       
       <Text style={styles.message}>
@@ -137,6 +141,7 @@ export default function TripFeedbackScreen({ navigation, route }) {
         <Text style={styles.submitText}>Submit Report Data</Text>
       </TouchableOpacity>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

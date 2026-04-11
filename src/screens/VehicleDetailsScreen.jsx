@@ -7,7 +7,9 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../context/AuthContext";
@@ -105,7 +107,11 @@ export default function VehicleDetailsScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      style={{ flex: 1 }}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.replace("LicenseDetails")}>
           <Ionicons name="arrow-back" size={24} color="#000" />
@@ -252,7 +258,10 @@ export default function VehicleDetailsScreen({ navigation }) {
           <Text style={styles.buttonText}>Finish Setup</Text>
         )}
       </TouchableOpacity>
+
+      <View style={{ height: 100 }} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

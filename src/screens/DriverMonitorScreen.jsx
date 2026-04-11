@@ -88,6 +88,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
   const [drivingTimeStr, setDrivingTimeStr] = useState("00:00:00");
   const [phoneUsageCount, setPhoneUsageCount] = useState(0);
   const appState = useRef(AppState.currentState);
+  
+  // Distraction / Focus tracking
+  const lastFaceDetectedTimeRef = useRef(Date.now());
+  const isFocusAlertActiveRef = useRef(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -132,7 +136,9 @@ export default function DriverMonitorScreen({ navigation, route }) {
       const mapped = {
         faces: faces ? faces.map(f => ({
           leftEyeOpenProbability: f.leftEyeOpenProbability,
-          rightEyeOpenProbability: f.rightEyeOpenProbability
+          rightEyeOpenProbability: f.rightEyeOpenProbability,
+          yawAngle: f.yawAngle,
+          pitchAngle: f.pitchAngle
         })) : []
       };
       handleFacesDetected(mapped);
@@ -185,19 +191,10 @@ export default function DriverMonitorScreen({ navigation, route }) {
   useEffect(() => {
     // Face not detected logic - trigger every 50 frames of absence (~2 seconds)
     if (missingFaceFrames > 0 && missingFaceFrames % 50 === 0) {
-       addAlert('Moderate', '⚠️ Face not detected in camera. Please face forward.', 'Face Not Detected');
-       setFaceStatusText("Warning - Face Not Detected");
-       playBeep('Moderate', 'Face not detected in camera. Please face forward.');
-       
-       setConsecutiveFaceLossAlerts(prev => {
-           const next = prev + 1;
-           if (next >= 3 && !showEmergencyModal) {
-              setShowEmergencyModal(true);
-              setEmergencyTimer(5);
-              return 0; // reset memory
-           }
-           return next;
-       });
+       // Silencing the 2-second repeated alert as per 10-second focus requirement
+       // addAlert('Moderate', '⚠️ Face not detected in camera. Please face forward.', 'Face Not Detected');
+       setFaceStatusText("Monitoring - Waiting for Face");
+       // playBeep('Moderate', 'Face not detected in camera. Please face forward.');
     }
   }, [missingFaceFrames, showEmergencyModal]);
 
@@ -324,15 +321,32 @@ export default function DriverMonitorScreen({ navigation, route }) {
       const data = await response.json();
       if (data && data.current_weather) {
         const code = data.current_weather.weathercode;
-        // WMO Codes: 51-67 (Rain), 71-77 (Snow), 80-86 (Showers), 95-99 (Thunderstorm)
-        if (code >= 51 && code <= 99) {
-          return "Hazardous (Rain/Snow/Storm)";
-        }
+        const temp = data.current_weather.temperature;
+        
+        const wmoMapping = {
+          0: "Clear Sky",
+          1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+          45: "Foggy", 48: "Depositing Rime Fog",
+          51: "Light Drizzle", 53: "Moderate Drizzle", 55: "Dense Drizzle",
+          61: "Slight Rain", 63: "Moderate Rain", 65: "Heavy Rain",
+          71: "Slight Snowfall", 73: "Moderate Snowfall", 75: "Heavy Snowfall",
+          80: "Slight Rain Showers", 81: "Moderate Rain Showers", 82: "Violent Rain Showers",
+          95: "Thunderstorm", 96: "Thunderstorm with Hail", 99: "Heavy Hailstorm"
+        };
+
+        const status = wmoMapping[code] || "Clear";
+        const isHazardous = code >= 51 && code <= 99;
+
+        return { 
+          status, 
+          temperature: temp, 
+          isHazardous 
+        };
       }
-      return "Clear";
+      return { status: "Unknown", temperature: "--", isHazardous: false };
     } catch (error) {
       console.log("Weather error:", error);
-      return "Unknown";
+      return { status: "Unknown", temperature: "--", isHazardous: false };
     }
   };
 
@@ -385,17 +399,44 @@ export default function DriverMonitorScreen({ navigation, route }) {
   };
 
   const handleFacesDetected = ({ faces }) => {
-    if (faces.length === 0) {
-      // No face detected
+    const now = Date.now();
+
+    const face = faces && faces.length > 0 ? faces[0] : null;
+    // Distracted if no face OR head turned significantly (Yaw > 20 degrees)
+    const isDistracted = !face || Math.abs(face.yawAngle || 0) > 20 || Math.abs(face.pitchAngle || 0) > 20;
+
+    if (isDistracted) {
+      // No valid/focused face detected
       setMissingFaceFrames(prev => prev + 1);
+      
+      // Check for 5-second distraction (Eye/Face not visible)
+      const distractionTime = now - lastFaceDetectedTimeRef.current;
+      if (distractionTime > 5000 && !isFocusAlertActiveRef.current) {
+        isFocusAlertActiveRef.current = true;
+        addAlert('Moderate', '⚠️ Eyes are not visible to the camera.', 'Focus Alert');
+        playBeep('Moderate', 'Eyes are not visible to the camera.');
+        setFaceStatusText("Eyes not visible");
+
+        // Integrated SOS Logic: Trigger after 3 focus alerts
+        setConsecutiveFaceLossAlerts(prev => {
+            const next = prev + 1;
+            if (next >= 3 && !showEmergencyModal) {
+               setShowEmergencyModal(true);
+               setEmergencyTimer(5);
+               return 0;
+            }
+            return next;
+        });
+      }
       return;
     }
 
-    // Face is detected! reset the missing tracker
+    // Face is detected! reset trackers
+    lastFaceDetectedTimeRef.current = now;
+    isFocusAlertActiveRef.current = false;
     setMissingFaceFrames(0);
     setConsecutiveFaceLossAlerts(0);
 
-    const face = faces[0];
     const leftEye = face.leftEyeOpenProbability;
     const rightEye = face.rightEyeOpenProbability;
 
@@ -487,17 +528,19 @@ export default function DriverMonitorScreen({ navigation, route }) {
             incidentHistoryRef.current = []; // Reset after coach warning
           }
 
-          // 3. Weather Risk Evaluation
-          if (now - weatherAlertCooldownRef.current > 600000) { // Every 10 mins
-            fetchRealWeather(loc.coords.latitude, loc.coords.longitude).then(cond => {
-              setWeatherCondition(cond);
-              if (cond.includes("Hazardous") || weatherCondition === "MOCKED_RAIN") {
-                playBeep('AI_COACH', `⚠️ Rain detected in your route. Reduce speed.`);
-                setAiCoachStatus("Weather Hazard");
-                weatherAlertCooldownRef.current = now;
-              }
-            });
-          }
+        // 3. Weather Risk Evaluation
+        if (now - weatherAlertCooldownRef.current > 600000) { // Every 10 mins
+          fetchRealWeather(loc.coords.latitude, loc.coords.longitude).then(data => {
+            setWeatherCondition(data);
+            if (data.isHazardous || weatherCondition?.status?.includes("Rain")) {
+              playBeep('AI_COACH', `⚠️ ${data.status} detected in your route. Reduce speed.`);
+              setAiCoachStatus("Weather Hazard");
+              weatherAlertCooldownRef.current = now;
+            } else {
+              setAiCoachStatus("Optimal");
+            }
+          });
+        }
         }
 
         if (mapRef.current) {
@@ -660,7 +703,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
             <Text className={`ml-2 text-xs font-black tracking-widest uppercase ${aiCoachStatus === 'Optimal' ? 'text-emerald-600' : 'text-amber-600'}`}>{aiCoachStatus}</Text>
          </View>
          {weatherCondition && (
-           <Text className="text-[11px] text-slate-500 mt-2 font-medium ml-5">📍 Weather: {weatherCondition}</Text>
+           <Text className="text-[11px] text-slate-500 mt-2 font-medium ml-5">📍 Weather: {weatherCondition.status} • {weatherCondition.temperature}°C</Text>
          )}
       </View>
 
@@ -700,12 +743,14 @@ export default function DriverMonitorScreen({ navigation, route }) {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
-              setWeatherCondition("MOCKED_RAIN");
-              playBeep('AI_COACH', `⚠️ Rain detected in your route. Reduce speed.`);
+              const mockRain = { status: "Heavy Rain", temperature: 18, isHazardous: true };
+              setWeatherCondition(mockRain);
+              playBeep('AI_COACH', `⚠️ ${mockRain.status} detected in your route. Reduce speed.`);
+              setAiCoachStatus("Weather Hazard");
             }}
-            className={`flex-1 py-3 rounded-2xl items-center border ${weatherCondition === "MOCKED_RAIN" ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800/40 border-slate-700/50'}`}
+            className={`flex-1 py-3 rounded-2xl items-center border ${weatherCondition?.status === "Heavy Rain" ? 'bg-blue-600/20 border-blue-500' : 'bg-slate-800/40 border-slate-700/50'}`}
           >
-            <Text className={`text-[10px] font-black tracking-wider uppercase ${weatherCondition === "MOCKED_RAIN" ? 'text-blue-400' : 'text-slate-400'}`}>Rain</Text>
+            <Text className={`text-[10px] font-black tracking-wider uppercase ${weatherCondition?.status === "Heavy Rain" ? 'text-blue-400' : 'text-slate-400'}`}>Rain</Text>
           </TouchableOpacity>
         </View>
       )}

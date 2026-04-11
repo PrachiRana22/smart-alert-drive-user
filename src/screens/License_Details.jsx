@@ -8,7 +8,9 @@ import {
   Alert,
   ScrollView,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -124,7 +126,11 @@ export default function LicenseDetails({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      style={{ flex: 1 }}
+    >
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => logout()}>
@@ -245,8 +251,9 @@ export default function LicenseDetails({ navigation }) {
           }}
         />
       )}
-      <View style={{ height: 50 }} />
-    </ScrollView>
+      <View style={{ height: 100 }} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
