@@ -91,6 +91,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
   
   // Distraction / Focus tracking
   const lastFaceDetectedTimeRef = useRef(Date.now());
+  const lastFocusAlertTimeRef = useRef(0);
   const isFocusAlertActiveRef = useRef(false);
 
   useEffect(() => {
@@ -409,9 +410,12 @@ export default function DriverMonitorScreen({ navigation, route }) {
       // No valid/focused face detected
       setMissingFaceFrames(prev => prev + 1);
       
-      // Check for 5-second distraction (Eye/Face not visible)
       const distractionTime = now - lastFaceDetectedTimeRef.current;
-      if (distractionTime > 5000 && !isFocusAlertActiveRef.current) {
+      const timeSinceLastFocusAlert = now - lastFocusAlertTimeRef.current;
+
+      // Check for distraction every 5-second interval
+      if (distractionTime > 5000 && timeSinceLastFocusAlert > 5000) {
+        lastFocusAlertTimeRef.current = now; // Mark that we just alerted
         isFocusAlertActiveRef.current = true;
         addAlert('Moderate', '⚠️ Eyes are not visible to the camera.', 'Focus Alert');
         playBeep('Moderate', 'Eyes are not visible to the camera.');
@@ -423,7 +427,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
             if (next >= 3 && !showEmergencyModal) {
                setShowEmergencyModal(true);
                setEmergencyTimer(5);
-               return 0;
+               return 0; // reset counter after modal pops
             }
             return next;
         });
@@ -433,6 +437,7 @@ export default function DriverMonitorScreen({ navigation, route }) {
 
     // Face is detected! reset trackers
     lastFaceDetectedTimeRef.current = now;
+    lastFocusAlertTimeRef.current = 0; // Reset alert timer so the next distraction starts its 5s fresh
     isFocusAlertActiveRef.current = false;
     setMissingFaceFrames(0);
     setConsecutiveFaceLossAlerts(0);
